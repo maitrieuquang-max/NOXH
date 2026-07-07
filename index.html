@@ -334,6 +334,7 @@ const DEFAULTS = {
   md_ham: 70,
   tang_ham: 3,
   so_thap: 14,
+  chieucao_tang: 3.4,
   // B. Basement / parking
   hieuqua_ham: 85,
   tyle_doxe_thap: 20,
@@ -372,16 +373,51 @@ const DEFAULTS = {
   gia_tmdv: 75000000,
   gia_noxh: 25000000,
   tyle_khaithac_tm: 80,
+  // Cho thuê tối thiểu 20% diện tích sàn NOXH
+  tyle_chothue: 20,
+  gia_thue_noxh: 120000,
+  so_nam_thue: 5,
+  tyle_lapday: 95,
+  tl_vh_thue: 10,
+  ck_thue: 8,
+  heso_ban_sau: 100,
   ln_dinhmuc: 10,
   // Targets / reference
   ln_muctieu: 10
 };
 
-// ---------- Reference thresholds (Bang tra QCVN) ----------
+// ---------- Reference thresholds (QCVN 01:2026/BXD — TT 46/2026/TT-BXD, hiệu lực 01/01/2027) ----------
+// Bảng 9 — Mật độ xây dựng thuần tối đa (%) của lô đất xây dựng nhà chung cư, nhà chung cư hỗn hợp
+// theo chiều cao công trình (m) và diện tích lô đất (m²). CHÚ THÍCH 1: nội suy tuyến tính theo diện tích lô;
+// CHÚ THÍCH 2: tổ hợp khối đế + khối tháp áp dụng riêng theo chiều cao từng khối.
+const B9_HEIGHTS = [16, 19, 22, 25, 28, 31, 34, 37, 40, 43, 46, Infinity];
+const B9_AREAS = [3000, 10000, 18000, 35000];
+const B9_TABLE = [[75, 65, 63, 60], [75, 60, 58, 55], [75, 57, 55, 52], [75, 53, 51, 48], [75, 50, 48, 45], [75, 48, 46, 43], [75, 46, 44, 41], [75, 44, 42, 39], [75, 43, 41, 38], [75, 42, 40, 37], [75, 41, 39, 36], [75, 40, 38, 35]];
+function mdxdMaxQC2026(h, area) {
+  let ri = B9_HEIGHTS.findIndex(x => h <= x);
+  if (ri < 0) ri = B9_HEIGHTS.length - 1;
+  const row = B9_TABLE[ri];
+  if (!isFinite(area) || area <= B9_AREAS[0]) return row[0];
+  if (area >= B9_AREAS[3]) return row[3];
+  for (let i = 0; i < 3; i++) {
+    if (area <= B9_AREAS[i + 1]) {
+      const t = (area - B9_AREAS[i]) / (B9_AREAS[i + 1] - B9_AREAS[i]);
+      return row[i] + t * (row[i + 1] - row[i]);
+    }
+  }
+  return row[3];
+}
 const REF = {
-  mdxd_de_max: 60,
-  mdxd_thap_max: 35,
   far_max: 13,
+  // điểm 2.5.3.5 QCVN 01:2026/BXD (công trình ≥ 46 m)
+  far_max_dacbiet: 18,
+  // ngoại lệ 2.5.3.5: khu vực khuyến khích cao tầng, thửa ≥ 3,5 ha, MĐXD ≤ 35%...
+  danso_dvo_max: 20000,
+  // điểm 2.2.2.2: quy mô dân số tối đa 1 đơn vị ở đô thị
+  cayxanh_dvo_min: 2,
+  // điểm 2.2.3.1: đất cây xanh SDCC trong đơn vị ở ≥ 2 m²/người
+  mamnon_min: 0.60,
+  // Bảng 6: đất trường mầm non cấp đơn vị ở ≥ 0,60 m²/người
   ham_max_pct: 85,
   tang_ham_max: 5,
   tang_noxh_max: 35,
@@ -407,6 +443,14 @@ function compute(v) {
   const can_tang_thap = fp_1thap * (v.hssdsan / 100) * (v.hstt / 100) / v.dt_canho;
   const dat_can_thap = v.so_thap * (Math.sqrt(Math.max(fp_1thap, 0)) + 40) ** 2;
   const mdxd_toiuu = v.so_thap && dt_kha_dung ? 857 * v.so_thap / dt_kha_dung * 100 : 0;
+
+  // Đối chiếu QCVN 01:2026/BXD (Bảng 9, nội suy theo diện tích lô; áp dụng riêng khối đế / khối tháp)
+  const h_de = v.tang_de * v.chieucao_tang;
+  const h_ct = v.tong_tang * v.chieucao_tang;
+  const mdxd_de_lim = mdxdMaxQC2026(h_de, dt_kha_dung);
+  const mdxd_thap_lim = mdxdMaxQC2026(h_ct, dt_kha_dung);
+  // Ngoại lệ FAR 18 lần theo 2.5.3.5: thửa đất ≥ 3,5 ha và MĐXD thuần ≤ 35% (+ điều kiện quy hoạch khác)
+  const far_ngoai_le = dt_kha_dung >= 35000 && v.md_de <= 35 && v.md_thap <= 35;
 
   // IV. Hầm & đỗ xe
   const fp_ham = dt_kha_dung * (v.md_ham / 100);
@@ -447,18 +491,31 @@ function compute(v) {
   const cp_duphong = tong_truoc_dp * (v.tl_duphong / 100);
   const tmdt = tong_truoc_dp + cp_duphong;
 
-  // VII. Doanh thu
+  // VII. Doanh thu — tách phần bán / phần dành cho thuê (tối thiểu 20% diện tích sàn NOXH)
   const dt_tm = san_de * (v.tyle_khaithac_tm / 100) * v.gia_tmdv;
-  const dt_noxh = dt_sudung_canho * v.gia_noxh;
-  const dt_tong = dt_tm + dt_noxh;
+  const dt_thue_m2 = dt_sudung_canho * (v.tyle_chothue / 100);
+  const dt_ban_m2 = dt_sudung_canho - dt_thue_m2;
+  const so_can_thue = Math.round(so_can * (v.tyle_chothue / 100));
+  const so_can_ban = so_can - so_can_thue;
+  const ck = v.ck_thue / 100;
+  const pvA = ck > 0 ? (1 - Math.pow(1 + ck, -v.so_nam_thue)) / ck : v.so_nam_thue;
+  // Tiền thuê ròng/năm = DT thuê × giá thuê × 12 tháng × tỷ lệ lấp đầy × (1 − chi phí vận hành cho thuê)
+  const thue_rong_nam = dt_thue_m2 * v.gia_thue_noxh * 12 * (v.tyle_lapday / 100) * (1 - v.tl_vh_thue / 100);
+  const pv_thue = thue_rong_nam * pvA;
+  // Bán lại phần cho thuê sau khi hết thời gian cho thuê tối thiểu, chiết khấu về hiện tại
+  const pv_ban_sau = dt_thue_m2 * v.gia_noxh * (v.heso_ban_sau / 100) / Math.pow(1 + ck, v.so_nam_thue);
+  const dt_noxh = dt_ban_m2 * v.gia_noxh;
+  const dt_chothue = pv_thue + pv_ban_sau;
+  const dt_tong = dt_tm + dt_noxh + dt_chothue;
   const ln_gop = dt_tong - tmdt;
   const ts_ln_dt = dt_tong ? ln_gop / dt_tong * 100 : 0;
   const ts_ln_von = tmdt ? ln_gop / tmdt * 100 : 0;
 
   // VIII. Reverse calculations
   const dt_tong_can = v.ln_muctieu < 100 ? tmdt / (1 - v.ln_muctieu / 100) : NaN;
-  const dt_noxh_can = dt_tong_can - dt_tm;
-  const gia_noxh_can = dt_sudung_canho ? dt_noxh_can / dt_sudung_canho : NaN;
+  const dt_noxh_can = dt_tong_can - dt_tm - pv_thue;
+  const mau_gia_can = dt_ban_m2 + dt_thue_m2 * (v.heso_ban_sau / 100) / Math.pow(1 + ck, v.so_nam_thue);
+  const gia_noxh_can = mau_gia_can ? dt_noxh_can / mau_gia_can : NaN;
   const cp_codinh = (cp_gpmb + cp_sdd + cp_hatang_noikhu + cp_hatang_ngoairanh + cp_xulynen + cp_tre + cp_shcd) * (1 + v.tl_duphong / 100);
   const heso_k = (1 + v.tl_thietbi / 100) * (1 + (v.tl_qlda + v.tl_tuvan + v.tl_khac + v.tl_pccc + v.tl_vanhanh + v.tl_kiemtoan) / 100 + v.tl_vonvay / 100 * (v.ls_vay / 100) * v.tg_vay) * (1 + v.tl_duphong / 100);
   const dg_xd_max = gfa_tb && heso_k ? (dt_tong * (1 - v.ln_muctieu / 100) - cp_codinh) / (heso_k * gfa_tb) : NaN;
@@ -475,6 +532,11 @@ function compute(v) {
     can_tang_thap,
     dat_can_thap,
     mdxd_toiuu,
+    h_de,
+    h_ct,
+    mdxd_de_lim,
+    mdxd_thap_lim,
+    far_ngoai_le,
     fp_ham,
     san_ham,
     ham_kha_dung,
@@ -510,6 +572,14 @@ function compute(v) {
     tmdt,
     dt_tm,
     dt_noxh,
+    dt_thue_m2,
+    dt_ban_m2,
+    so_can_thue,
+    so_can_ban,
+    thue_rong_nam,
+    pv_thue,
+    pv_ban_sau,
+    dt_chothue,
     dt_tong,
     ln_gop,
     ts_ln_dt,
@@ -528,9 +598,15 @@ function warnings(v, r) {
     level,
     text
   });
-  if (v.md_de > REF.mdxd_de_max) push("danger", `MĐXD Đế (${v.md_de}%) vượt mức tối đa ${REF.mdxd_de_max}% theo Bảng 2.10 QCVN 01:2021/BXD.`);
-  if (v.md_thap > REF.mdxd_thap_max) push("danger", `MĐXD Tháp (${v.md_thap}%) vượt mức tối đa ${REF.mdxd_thap_max}% theo Bảng 2.9 QCVN 01:2021/BXD.`);
-  if (r.far > REF.far_max) push("danger", `Hệ số sử dụng đất FAR (${fmt2(r.far)} lần) vượt mức tối đa ${REF.far_max} lần (mục 2.6.3 QCVN 01:2021/BXD).`);
+  if (v.md_de > r.mdxd_de_lim) push("danger", `MĐXD khối Đế (${v.md_de}%) vượt mức tối đa ${fmt1(r.mdxd_de_lim)}% theo Bảng 9 QCVN 01:2026/BXD (chiều cao khối Đế ≈ ${fmt1(r.h_de)} m, lô ${fmt0(r.dt_kha_dung)} m², nội suy theo diện tích lô).`);else push("ok", `MĐXD khối Đế (${v.md_de}%) ≤ ${fmt1(r.mdxd_de_lim)}% — đạt Bảng 9 QCVN 01:2026/BXD (áp dụng riêng khối Đế theo CHÚ THÍCH 2).`);
+  if (v.md_thap > r.mdxd_thap_lim) push("danger", `MĐXD khối Tháp (${v.md_thap}%) vượt mức tối đa ${fmt1(r.mdxd_thap_lim)}% theo Bảng 9 QCVN 01:2026/BXD (chiều cao công trình ≈ ${fmt1(r.h_ct)} m, lô ${fmt0(r.dt_kha_dung)} m²).`);else push("ok", `MĐXD khối Tháp (${v.md_thap}%) ≤ ${fmt1(r.mdxd_thap_lim)}% — đạt Bảng 9 QCVN 01:2026/BXD.`);
+  if (r.far > REF.far_max) {
+    if (r.far <= REF.far_max_dacbiet && r.far_ngoai_le) push("warn", `FAR (${fmt2(r.far)} lần) vượt 13 lần — chỉ được chấp thuận theo ngoại lệ điểm 2.5.3.5 QCVN 01:2026/BXD (tối đa 18 lần): phải thuộc khu vực khuyến khích phát triển cao tầng, đạt tiêu chí điểm nhấn kiến trúc và các điều kiện hạ tầng kèm theo (thửa ≥ 3,5 ha và MĐXD ≤ 35% đã thỏa).`);else push("danger", `Hệ số sử dụng đất FAR (${fmt2(r.far)} lần) vượt mức tối đa ${REF.far_max} lần với công trình ≥ 46 m (điểm 2.5.3.5 QCVN 01:2026/BXD)${r.far <= REF.far_max_dacbiet ? " — không đủ điều kiện ngoại lệ 18 lần (cần thửa ≥ 3,5 ha và MĐXD thuần ≤ 35%)." : "."}`);
+  }
+  if (r.h_ct >= 46) push("warn", `Công trình cao ≈ ${fmt1(r.h_ct)} m (≥ 46 m): khoảng cách cạnh dài giữa các tháp ≥ 25 m, đầu hồi ≥ 15 m (điểm 2.5.1.2 QCVN 01:2026/BXD) — kiểm tra khi bố trí tổng mặt bằng.`);
+  if (r.dan_so > REF.danso_dvo_max) push("warn", `Dân số dự án (${fmt0(r.dan_so)} người) vượt quy mô tối đa 1 đơn vị ở đô thị (${fmt0(REF.danso_dvo_max)} người, điểm 2.2.2.2 QCVN 01:2026/BXD) — phải tổ chức thành ≥ 2 đơn vị ở với đầy đủ hạ tầng xã hội tương ứng.`);
+  push("ok", `Đất cây xanh sử dụng công cộng trong đơn vị ở tối thiểu ${fmt0(r.dan_so * REF.cayxanh_dvo_min)} m² (${REF.cayxanh_dvo_min} m²/người, điểm 2.2.3.1) + tối thiểu 1 công viên ≥ 5.000 m² hoặc 2 công viên ≥ 2.500 m² (điểm 2.2.3.2 QCVN 01:2026/BXD); tỷ lệ trồng cây xanh trong lô chung cư ≥ 16 m: ≥ 20% (Bảng 11).`);
+  if (r.dat_tre < r.dan_so * REF.mamnon_min) push("warn", `Đất trường mầm non theo TCVN 3907 (${fmt0(r.dat_tre)} m²) THẤP HƠN chỉ tiêu tối thiểu ${fmt0(r.dan_so * REF.mamnon_min)} m² (0,60 m²/người, Bảng 6 QCVN 01:2026/BXD) — áp dụng giá trị lớn hơn khi lập QHCT 1/500.`);
   if (v.tong_tang > REF.tang_noxh_max) push("warn", `Tổng số tầng (${v.tong_tang}) vượt mức tham khảo ${REF.tang_noxh_max} tầng — cần đối chiếu QHCT 1/500 cụ thể.`);
   if (v.tang_ham > REF.tang_ham_max) push("warn", `Số tầng hầm (${v.tang_ham}) vượt ${REF.tang_ham_max} tầng — QĐ 425/QĐ-BXD không công bố suất vốn cho mức này.`);
   if (v.md_ham > REF.ham_max_pct) push("warn", `MĐXD tầng hầm (${v.md_ham}%) vượt ngưỡng hợp lý ${REF.ham_max_pct}% — cần biện pháp kết cấu đặc biệt.`);
@@ -540,8 +616,10 @@ function warnings(v, r) {
   if (r.doi_chieu_doxe < 0) push("danger", `Thiếu diện tích đỗ xe trong hầm (thiếu ${fmt0(-r.doi_chieu_doxe)} m²) — cần tăng tầng hầm, tăng MĐXD hầm, hoặc bổ sung bãi đỗ ngoài.`);
   if (r.so_tre > 1050) push("warn", `Số trẻ cần phục vụ (${fmt0(r.so_tre)}) vượt quy mô 1.050 cháu — QĐ 425/QĐ-BXD chỉ công bố đến mức này, có thể cần ≥2 điểm trường.`);
   if (r.dat_tre > r.dt_kha_dung * 0.05) push("warn", `Diện tích đất nhà trẻ (${fmt0(r.dat_tre)} m²) vượt 5% tổng đất khả dụng — đối chiếu lại QHCT 1/500.`);
+  if (v.tyle_chothue < 20) push("danger", `Tỷ lệ diện tích sàn NOXH dành để cho thuê (${v.tyle_chothue}%) THẤP HƠN mức tối thiểu 20% theo quy định — điều chỉnh về ≥ 20%.`);else push("ok", `Dành ${v.tyle_chothue}% diện tích sàn NOXH để cho thuê (${fmt0(r.dt_thue_m2)} m² ≈ ${fmt0(r.so_can_thue)} căn) — đạt mức tối thiểu 20%. Tiền thuê ròng ≈ ${fmtTy(r.thue_rong_nam)} tỷ/năm; giá trị quy về hiện tại của phần cho thuê (${v.so_nam_thue} năm thuê + bán lại, chiết khấu ${v.ck_thue}%/năm) ≈ ${fmtTy(r.dt_chothue)} tỷ đồng.`);
   if (r.ts_ln_dt > v.ln_dinhmuc) push("danger", `Tỷ suất LN/Doanh thu (${fmt1(r.ts_ln_dt)}%) VƯỢT mức lợi nhuận định mức ${v.ln_dinhmuc}% cho phép theo NĐ 100/2024/NĐ-CP — cần giảm giá bán hoặc nộp lại phần vượt.`);else if (r.ts_ln_dt < 0) push("danger", `Phương án đang LỖ: Tỷ suất LN/Doanh thu = ${fmt1(r.ts_ln_dt)}%.`);else push("ok", `Tỷ suất LN/Doanh thu (${fmt1(r.ts_ln_dt)}%) trong mức lợi nhuận định mức ${v.ln_dinhmuc}% cho phép.`);
   if (isFinite(r.gia_noxh_can) && r.gia_noxh_can > 25000000 * 1.001) push("warn", `Giá bán NOXH cần để đạt LN mục tiêu (${fmt0(r.gia_noxh_can)} đ/m²) vượt khung phổ biến Hà Nội (18–25 triệu/m²).`);
+  push("ok", `Cơ sở đối chiếu: QCVN 01:2026/BXD ban hành kèm TT 46/2026/TT-BXD ngày 30/6/2026, hiệu lực 01/01/2027, thay thế QCVN 01:2021/BXD. Quy hoạch đã phê duyệt/thẩm định trước ngày hiệu lực tiếp tục thực hiện theo quyết định duyệt; trường hợp điều chỉnh quy hoạch sau ngày hiệu lực phải tuân thủ quy chuẩn mới (mục 5.4).`);
   return w;
 }
 
@@ -593,6 +671,11 @@ const SECTIONS = [{
     label: "Số lượng tháp dự kiến",
     unit: "tháp",
     step: 1
+  }, {
+    key: "chieucao_tang",
+    label: "Chiều cao bình quân 1 tầng (tra Bảng 9 QCVN 01:2026)",
+    unit: "m",
+    step: 0.1
   }]
 }, {
   title: "B · Tầng hầm & đỗ xe",
@@ -784,6 +867,45 @@ const SECTIONS = [{
     unit: "%",
     step: 0.5,
     highlight: true
+  }]
+}, {
+  title: "G · Cho thuê NOXH (≥ 20%)",
+  fields: [{
+    key: "tyle_chothue",
+    label: "Tỷ lệ DT sàn NOXH dành cho thuê (tối thiểu 20%)",
+    unit: "%",
+    step: 1,
+    highlight: true
+  }, {
+    key: "gia_thue_noxh",
+    label: "Giá cho thuê NOXH (m² sử dụng)",
+    unit: "đ/m²/tháng",
+    step: 5000
+  }, {
+    key: "so_nam_thue",
+    label: "Thời gian cho thuê trước khi được bán",
+    unit: "năm",
+    step: 1
+  }, {
+    key: "tyle_lapday",
+    label: "Tỷ lệ lấp đầy bình quân",
+    unit: "%",
+    step: 1
+  }, {
+    key: "tl_vh_thue",
+    label: "Chi phí vận hành, quản lý cho thuê / DT thuê",
+    unit: "%",
+    step: 0.5
+  }, {
+    key: "ck_thue",
+    label: "Suất chiết khấu quy đổi dòng tiền thuê",
+    unit: "%/năm",
+    step: 0.5
+  }, {
+    key: "heso_ban_sau",
+    label: "Giá bán lại sau thời gian thuê (so với giá bán NOXH)",
+    unit: "%",
+    step: 5
   }]
 }];
 function NumberField({
@@ -1243,16 +1365,40 @@ function ProfitGauge({
 }
 function RevenueDonut({
   dtNoxh,
-  dtTm
+  dtTm,
+  dtThue
 }) {
-  const total = dtNoxh + dtTm;
-  const pNoxh = dtNoxh / total;
+  const thue = dtThue || 0;
+  const total = dtNoxh + dtTm + thue;
+  const parts = [{
+    val: dtNoxh,
+    color: "#2a78d6",
+    lbl: "Bán NOXH"
+  }, {
+    val: thue,
+    color: "#e08a2e",
+    lbl: "Cho thuê"
+  }, {
+    val: dtTm,
+    color: "#1baf7a",
+    lbl: "TM-DV"
+  }];
   const r = 44,
     circ = 2 * Math.PI * r,
     cx = 75,
     cy = 75;
-  const d1 = pNoxh * circ;
-  const d2 = (1 - pNoxh) * circ;
+  let acc = 0;
+  const segs = parts.map(p => {
+    const frac = total ? p.val / total : 0;
+    const seg = {
+      ...p,
+      frac,
+      dash: frac * circ,
+      offset: circ / 4 - acc * circ
+    };
+    acc += frac;
+    return seg;
+  });
   return /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
@@ -1263,25 +1409,17 @@ function RevenueDonut({
     viewBox: "0 0 150 150",
     width: "120",
     height: "120"
-  }, /*#__PURE__*/React.createElement("circle", {
+  }, segs.map((s, i) => /*#__PURE__*/React.createElement("circle", {
+    key: i,
     cx: cx,
     cy: cy,
     r: r,
     fill: "none",
-    stroke: "#2a78d6",
+    stroke: s.color,
     strokeWidth: "20",
-    strokeDasharray: d1 + " " + circ,
-    strokeDashoffset: circ / 4
-  }), /*#__PURE__*/React.createElement("circle", {
-    cx: cx,
-    cy: cy,
-    r: r,
-    fill: "none",
-    stroke: "#1baf7a",
-    strokeWidth: "20",
-    strokeDasharray: d2 + " " + circ,
-    strokeDashoffset: -(pNoxh * circ - circ / 4)
-  }), /*#__PURE__*/React.createElement("text", {
+    strokeDasharray: s.dash + " " + circ,
+    strokeDashoffset: s.offset
+  })), /*#__PURE__*/React.createElement("text", {
     x: cx,
     y: cy - 4,
     textAnchor: "middle",
@@ -1299,31 +1437,25 @@ function RevenueDonut({
   }, "tỷ đồng")), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
-      gap: "14px",
+      gap: "10px",
       fontSize: "11px",
-      color: "var(--text-secondary)"
+      color: "var(--text-secondary)",
+      flexWrap: "wrap",
+      justifyContent: "center"
     }
-  }, /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("span", {
+  }, segs.map((s, i) => /*#__PURE__*/React.createElement("span", {
+    key: i
+  }, /*#__PURE__*/React.createElement("span", {
     style: {
       display: "inline-block",
       width: "10px",
       height: "10px",
       borderRadius: "2px",
-      background: "#2a78d6",
+      background: s.color,
       marginRight: "3px",
       verticalAlign: "middle"
     }
-  }), "NOXH ", Math.round(pNoxh * 100), "%"), /*#__PURE__*/React.createElement("span", null, /*#__PURE__*/React.createElement("span", {
-    style: {
-      display: "inline-block",
-      width: "10px",
-      height: "10px",
-      borderRadius: "2px",
-      background: "#1baf7a",
-      marginRight: "3px",
-      verticalAlign: "middle"
-    }
-  }), "TM-DV ", Math.round((1 - pNoxh) * 100), "%")));
+  }), s.lbl + " ", Math.round(s.frac * 100), "%"))));
 }
 function NOXHCalculator() {
   const [v, setV] = useState(DEFAULTS);
@@ -1862,7 +1994,7 @@ function NOXHCalculator() {
     className: "topbar__title"
   }, "Công cụ tính toán Nhà ở Xã hội", /*#__PURE__*/React.createElement("small", null, "Quy hoạch · Kỹ thuật · Hiệu quả đầu tư"))), /*#__PURE__*/React.createElement("div", {
     className: "topbar__sub"
-  }, "QCVN 01:2021 · QCVN 04:2021 · TCVN 3907:2011 · NĐ 100/2024/NĐ-CP · QĐ 425/QĐ-BXD")), /*#__PURE__*/React.createElement("div", {
+  }, "QCVN 01:2026/BXD (TT 46/2026, hiệu lực 01/01/2027) · QCVN 04:2021 & SĐ 01:2026 · TCVN 3907:2011 · NĐ 100/2024/NĐ-CP · QĐ 425/QĐ-BXD")), /*#__PURE__*/React.createElement("div", {
     className: "layout"
   }, /*#__PURE__*/React.createElement("aside", {
     className: "panel-left"
@@ -1930,19 +2062,19 @@ function NOXHCalculator() {
     className: "db-card"
   }, /*#__PURE__*/React.createElement("div", {
     className: "db-card__title"
-  }, "Mật độ xây dựng — đối chiếu QCVN 01:2021/BXD"), [{
-    lbl: "MĐXD Đế",
+  }, "Mật độ xây dựng — đối chiếu Bảng 9 QCVN 01:2026/BXD"), [{
+    lbl: "MĐXD Đế (h≈" + fmt1(r.h_de) + "m)",
     val: v.md_de,
     max: 100,
-    limit: 60,
-    c: v.md_de > 60 ? "bad" : v.md_de > 50 ? "warn" : "ok",
+    limit: Math.round(r.mdxd_de_lim),
+    c: v.md_de > r.mdxd_de_lim ? "bad" : v.md_de > r.mdxd_de_lim - 8 ? "warn" : "ok",
     display: v.md_de + "%"
   }, {
-    lbl: "MĐXD Tháp",
+    lbl: "MĐXD Tháp (h≈" + fmt1(r.h_ct) + "m)",
     val: v.md_thap,
     max: 100,
-    limit: 35,
-    c: v.md_thap > 35 ? "bad" : v.md_thap > 28 ? "warn" : "ok",
+    limit: Math.round(r.mdxd_thap_lim),
+    c: v.md_thap > r.mdxd_thap_lim ? "bad" : v.md_thap > r.mdxd_thap_lim - 5 ? "warn" : "ok",
     display: v.md_thap + "%"
   }, {
     lbl: "MĐXD Hầm",
@@ -2212,7 +2344,8 @@ function NOXHCalculator() {
     className: "db-card__title"
   }, "Cơ cấu doanh thu"), /*#__PURE__*/React.createElement(RevenueDonut, {
     dtNoxh: r.dt_noxh,
-    dtTm: r.dt_tm
+    dtTm: r.dt_tm,
+    dtThue: r.dt_chothue
   }))), /*#__PURE__*/React.createElement("div", {
     className: "db-fin-grid"
   }, [{
@@ -2305,9 +2438,13 @@ function NOXHCalculator() {
     className: "ledger"
   }, /*#__PURE__*/React.createElement("caption", null, "Doanh thu & hiệu quả tài chính"), /*#__PURE__*/React.createElement("tbody", null, /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("td", null, "Doanh thu Thương mại - Dịch vụ"), /*#__PURE__*/React.createElement("td", {
     className: "num"
-  }, fmt0(r.dt_tm))), /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("td", null, "Doanh thu bán NOXH (m² sử dụng)"), /*#__PURE__*/React.createElement("td", {
+  }, fmt0(r.dt_tm))), /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("td", null, "Doanh thu bán NOXH (" + (100 - v.tyle_chothue) + "% DT sàn)"), /*#__PURE__*/React.createElement("td", {
     className: "num"
-  }, fmt0(r.dt_noxh))), /*#__PURE__*/React.createElement("tr", {
+  }, fmt0(r.dt_noxh))), /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("td", null, "Tiền thuê ròng phần " + v.tyle_chothue + "% (PV " + v.so_nam_thue + " năm)"), /*#__PURE__*/React.createElement("td", {
+    className: "num"
+  }, fmt0(r.pv_thue))), /*#__PURE__*/React.createElement("tr", null, /*#__PURE__*/React.createElement("td", null, "Bán lại phần cho thuê sau " + v.so_nam_thue + " năm (PV)"), /*#__PURE__*/React.createElement("td", {
+    className: "num"
+  }, fmt0(r.pv_ban_sau))), /*#__PURE__*/React.createElement("tr", {
     className: "total"
   }, /*#__PURE__*/React.createElement("td", null, "TỔNG DOANH THU"), /*#__PURE__*/React.createElement("td", {
     className: "num"
@@ -2472,7 +2609,7 @@ async function exportToExcel(v, r, warns) {
     }
   };
   let r2 = 3;
-  const resultRows = [["III. CHỈ TIÊU XÂY DỰNG", null, null], ["Diện tích đất khả dụng", r.dt_kha_dung, "m²"], ["Footprint khối Đế", r.fp_de, "m²"], ["Sàn khối Đế", r.san_de, "m²"], ["Footprint khối Tháp (tổng)", r.fp_thap, "m²"], ["Sàn khối Tháp", r.san_thap, "m²"], ["GFA phần nổi", r.gfa_noi, "m²"], ["Hệ số sử dụng đất FAR", r.far, "lần"], ["Footprint trung bình / tháp", r.fp_1thap, "m²"], ["Số căn / tầng / tháp", r.can_tang_thap, "căn"], ["Diện tích đất cần (ước lượng, có khoảng cách)", r.dat_can_thap, "m²"], ["MĐXD Tháp tối ưu khuyến nghị", r.mdxd_toiuu, "%"], [null, null, null], ["IV. TẦNG HẦM & ĐỖ XE", null, null], ["Sàn hầm (tổng)", r.san_ham, "m²"], ["Hầm khả dụng để đỗ xe", r.ham_kha_dung, "m²"], ["DT sử dụng/thông thủy căn hộ", r.dt_sudung_canho, "m²"], ["Tổng DT đỗ xe yêu cầu", r.doxe_tong, "m²"], ["Đối chiếu (Hầm khả dụng - yêu cầu)", r.doi_chieu_doxe, "m²"], [null, null, null], ["V. DÂN SỐ & CĂN HỘ", null, null], ["Số lượng căn hộ NOXH", r.so_can, "căn"], ["Quy mô dân số dự kiến", r.dan_so, "người"], ["Số trẻ cần phục vụ (TCVN 3907)", r.so_tre, "trẻ"], ["Diện tích đất nhà trẻ tối thiểu", r.dat_tre, "m²"], [null, null, null], ["VI. TỔNG MỨC ĐẦU TƯ", null, null], ["(1) Bồi thường, GPMB", r.cp_gpmb, "đồng"], ["(2) Tiền sử dụng đất", r.cp_sdd, "đồng"], ["(3) Hạ tầng kỹ thuật nội khu", r.cp_hatang_noikhu, "đồng"], ["(4) Hạ tầng kỹ thuật ngoài ranh", r.cp_hatang_ngoairanh, "đồng"], ["(5) Xử lý nền đất yếu", r.cp_xulynen, "đồng"], ["(6a) Nhà trẻ / Mẫu giáo", r.cp_tre, "đồng"], ["(6b) Nhà sinh hoạt cộng đồng", r.cp_shcd, "đồng"], ["(7) Xây dựng công trình chính", r.cp_xd, "đồng"], ["(8) Thiết bị", r.cp_tb, "đồng"], ["Cộng CPXD + CPTB", r.cpxdtb, "đồng"], ["(9) Quản lý dự án", r.cp_qlda, "đồng"], ["(10) Tư vấn đầu tư xây dựng", r.cp_tuvan, "đồng"], ["(11) Chi phí khác", r.cp_khac, "đồng"], ["(12) PCCC, kiểm định", r.cp_pccc, "đồng"], ["(13) Vận hành tạm", r.cp_vanhanh, "đồng"], ["(14) Kiểm toán / Quyết toán", r.cp_kiemtoan, "đồng"], ["(15) Lãi vay", r.cp_laivay, "đồng"], ["Tổng chi phí trước dự phòng", r.tong_truoc_dp, "đồng"], ["(17) Dự phòng", r.cp_duphong, "đồng"], ["TỔNG MỨC ĐẦU TƯ (TMĐT)", r.tmdt, "đồng", true], [null, null, null], ["VII. DOANH THU & HIỆU QUẢ TÀI CHÍNH", null, null], ["Doanh thu Thương mại - Dịch vụ", r.dt_tm, "đồng"], ["Doanh thu bán NOXH (m² sử dụng)", r.dt_noxh, "đồng"], ["TỔNG DOANH THU", r.dt_tong, "đồng", true], ["Lợi nhuận gộp", r.ln_gop, "đồng"], ["Tỷ suất Lợi nhuận / Doanh thu", r.ts_ln_dt, "%"], ["Tỷ suất Lợi nhuận / Vốn đầu tư", r.ts_ln_von, "%"], [null, null, null], ["VIII. TÍNH NGƯỢC THEO LỢI NHUẬN MỤC TIÊU", null, null], ["Tỷ suất lợi nhuận mục tiêu", v.ln_muctieu, "%"], ["Doanh thu cần đạt", r.dt_tong_can, "đồng"], ["Giá bán NOXH cần thiết", r.gia_noxh_can, "đ/m²", true], ["Đơn giá xây dựng tối đa cho phép", r.dg_xd_max, "đ/m²", true]];
+  const resultRows = [["III. CHỈ TIÊU XÂY DỰNG", null, null], ["Diện tích đất khả dụng", r.dt_kha_dung, "m²"], ["Footprint khối Đế", r.fp_de, "m²"], ["Sàn khối Đế", r.san_de, "m²"], ["Footprint khối Tháp (tổng)", r.fp_thap, "m²"], ["Sàn khối Tháp", r.san_thap, "m²"], ["GFA phần nổi", r.gfa_noi, "m²"], ["Hệ số sử dụng đất FAR", r.far, "lần"], ["Footprint trung bình / tháp", r.fp_1thap, "m²"], ["Số căn / tầng / tháp", r.can_tang_thap, "căn"], ["Diện tích đất cần (ước lượng, có khoảng cách)", r.dat_can_thap, "m²"], ["MĐXD Tháp tối ưu khuyến nghị", r.mdxd_toiuu, "%"], [null, null, null], ["IV. TẦNG HẦM & ĐỖ XE", null, null], ["Sàn hầm (tổng)", r.san_ham, "m²"], ["Hầm khả dụng để đỗ xe", r.ham_kha_dung, "m²"], ["DT sử dụng/thông thủy căn hộ", r.dt_sudung_canho, "m²"], ["Tổng DT đỗ xe yêu cầu", r.doxe_tong, "m²"], ["Đối chiếu (Hầm khả dụng - yêu cầu)", r.doi_chieu_doxe, "m²"], [null, null, null], ["V. DÂN SỐ & CĂN HỘ", null, null], ["Số lượng căn hộ NOXH", r.so_can, "căn"], ["— Trong đó: căn hộ để bán", r.so_can_ban, "căn"], ["— Trong đó: căn hộ dành cho thuê (≥20%)", r.so_can_thue, "căn"], ["Quy mô dân số dự kiến", r.dan_so, "người"], ["Số trẻ cần phục vụ (TCVN 3907)", r.so_tre, "trẻ"], ["Diện tích đất nhà trẻ tối thiểu", r.dat_tre, "m²"], [null, null, null], ["VI. TỔNG MỨC ĐẦU TƯ", null, null], ["(1) Bồi thường, GPMB", r.cp_gpmb, "đồng"], ["(2) Tiền sử dụng đất", r.cp_sdd, "đồng"], ["(3) Hạ tầng kỹ thuật nội khu", r.cp_hatang_noikhu, "đồng"], ["(4) Hạ tầng kỹ thuật ngoài ranh", r.cp_hatang_ngoairanh, "đồng"], ["(5) Xử lý nền đất yếu", r.cp_xulynen, "đồng"], ["(6a) Nhà trẻ / Mẫu giáo", r.cp_tre, "đồng"], ["(6b) Nhà sinh hoạt cộng đồng", r.cp_shcd, "đồng"], ["(7) Xây dựng công trình chính", r.cp_xd, "đồng"], ["(8) Thiết bị", r.cp_tb, "đồng"], ["Cộng CPXD + CPTB", r.cpxdtb, "đồng"], ["(9) Quản lý dự án", r.cp_qlda, "đồng"], ["(10) Tư vấn đầu tư xây dựng", r.cp_tuvan, "đồng"], ["(11) Chi phí khác", r.cp_khac, "đồng"], ["(12) PCCC, kiểm định", r.cp_pccc, "đồng"], ["(13) Vận hành tạm", r.cp_vanhanh, "đồng"], ["(14) Kiểm toán / Quyết toán", r.cp_kiemtoan, "đồng"], ["(15) Lãi vay", r.cp_laivay, "đồng"], ["Tổng chi phí trước dự phòng", r.tong_truoc_dp, "đồng"], ["(17) Dự phòng", r.cp_duphong, "đồng"], ["TỔNG MỨC ĐẦU TƯ (TMĐT)", r.tmdt, "đồng", true], [null, null, null], ["VII. DOANH THU & HIỆU QUẢ TÀI CHÍNH", null, null], ["Doanh thu Thương mại - Dịch vụ", r.dt_tm, "đồng"], ["DT sàn NOXH để bán (" + (100 - v.tyle_chothue) + "%)", r.dt_ban_m2, "m²"], ["Doanh thu bán NOXH", r.dt_noxh, "đồng"], ["DT sàn NOXH dành cho thuê (" + v.tyle_chothue + "%)", r.dt_thue_m2, "m²"], ["Tiền thuê ròng / năm (sau lấp đầy, vận hành)", r.thue_rong_nam, "đồng"], ["Giá trị hiện tại tiền thuê " + v.so_nam_thue + " năm (CK " + v.ck_thue + "%/năm)", r.pv_thue, "đồng"], ["Giá trị hiện tại bán lại phần cho thuê sau " + v.so_nam_thue + " năm", r.pv_ban_sau, "đồng"], ["Tổng giá trị phần cho thuê (PV)", r.dt_chothue, "đồng"], ["TỔNG DOANH THU", r.dt_tong, "đồng", true], ["Lợi nhuận gộp", r.ln_gop, "đồng"], ["Tỷ suất Lợi nhuận / Doanh thu", r.ts_ln_dt, "%"], ["Tỷ suất Lợi nhuận / Vốn đầu tư", r.ts_ln_von, "%"], [null, null, null], ["VIII. TÍNH NGƯỢC THEO LỢI NHUẬN MỤC TIÊU", null, null], ["Tỷ suất lợi nhuận mục tiêu", v.ln_muctieu, "%"], ["Doanh thu cần đạt", r.dt_tong_can, "đồng"], ["Giá bán NOXH cần thiết", r.gia_noxh_can, "đ/m²", true], ["Đơn giá xây dựng tối đa cho phép", r.dg_xd_max, "đ/m²", true]];
   for (const row of resultRows) {
     if (row[0] === null) {
       r2++;
