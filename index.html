@@ -638,7 +638,9 @@ function warnings(v, r) {
   if (r.so_tre > 1050) push("warn", `Số trẻ cần phục vụ (${fmt0(r.so_tre)}) vượt quy mô 1.050 cháu — QĐ 425/QĐ-BXD chỉ công bố đến mức này, có thể cần ≥2 điểm trường.`);
   if (r.dat_tre > r.dt_kha_dung * 0.05) push("warn", `Diện tích đất nhà trẻ (${fmt0(r.dat_tre)} m²) vượt 5% tổng đất khả dụng — đối chiếu lại QHCT 1/500.`);
   if (v.tyle_chothue < 25) push("danger", `Tỷ lệ diện tích sàn NOXH dành để cho thuê (${v.tyle_chothue}%) THẤP HƠN mức tối thiểu 25% theo yêu cầu mới của Thành phố (thay cho mức 20% trước đây) — điều chỉnh về ≥ 25%.`);else push("ok", `Dành ${v.tyle_chothue}% diện tích sàn NOXH để cho thuê (${fmt0(r.dt_thue_m2)} m² ≈ ${fmt0(r.so_can_thue)} căn) — đạt mức tối thiểu 25% theo quy định mới. Tiền thuê ròng ≈ ${fmtTy(r.thue_rong_nam)} tỷ/năm; giá trị quy về hiện tại của phần cho thuê (${v.so_nam_thue} năm thuê + bán lại, chiết khấu ${v.ck_thue}%/năm) ≈ ${fmtTy(r.dt_chothue)} tỷ đồng.`);
-  if (r.ts_ln_dt > v.ln_dinhmuc) push("danger", `Tỷ suất LN/Doanh thu (${fmt1(r.ts_ln_dt)}%) VƯỢT mức lợi nhuận định mức ${v.ln_dinhmuc}% cho phép theo NĐ 100/2024/NĐ-CP — cần giảm giá bán hoặc nộp lại phần vượt.`);else if (r.ts_ln_dt < 0) push("danger", `Phương án đang LỖ: Tỷ suất LN/Doanh thu = ${fmt1(r.ts_ln_dt)}%.`);else push("ok", `Tỷ suất LN/Doanh thu (${fmt1(r.ts_ln_dt)}%) trong mức lợi nhuận định mức ${v.ln_dinhmuc}% cho phép.`);
+  if (r.ts_ln_von < 0) push("danger", `Phương án đang LỖ: Lợi nhuận / Tổng mức đầu tư = ${fmt1(r.ts_ln_von)}%.`);else if (r.ts_ln_von > v.ln_dinhmuc) push("danger", `Lợi nhuận / Chi phí đầu tư (${fmt1(r.ts_ln_von)}%) VƯỢT trần lợi nhuận định mức ${v.ln_dinhmuc}% của phần nhà ở xã hội theo khoản 2 Điều 85 Luật Nhà ở 2023 — trần này tính trên CHI PHÍ ĐẦU TƯ phần NOXH, không phải trên doanh thu. Dùng tab "Mô hình tài chính" để suy giá bán ngược từ chi phí và tách riêng phần thương mại - dịch vụ.`);else push("ok", `Lợi nhuận / Chi phí đầu tư (${fmt1(r.ts_ln_von)}%) trong trần lợi nhuận định mức ${v.ln_dinhmuc}% (khoản 2 Điều 85 Luật Nhà ở 2023). Tab này gộp chung NOXH và TM-DV; để hạch toán tách riêng theo đúng quy định, dùng tab "Mô hình tài chính".`);
+  push("warn", `Đơn giá xây dựng đang nhập ${fmt0(v.dg_xd)} đ/m² được áp chung cho cả sàn nổi và sàn hầm, và chưa tách riêng chi phí thiết bị. Theo Quyết định 425/QĐ-BXD ngày 30/3/2026, suất vốn phải tra theo loại công trình, số tầng và số tầng hầm. Dùng tab "Mô hình tài chính" để đối chiếu tự động với bảng suất vốn của QĐ 425.`);
+  if (r.cp_sdd > 0) push("warn", `Mô hình đang tính ${fmtTy(r.cp_sdd)} tỷ đồng tiền sử dụng đất cho phần thương mại theo Nghị định 100/2015/NĐ-CP. Văn bản này đã hết hiệu lực: theo Điều 85 Luật Nhà ở 2023 và Nghị định 100/2024/NĐ-CP, chủ đầu tư dự án nhà ở xã hội được miễn tiền sử dụng đất đối với TOÀN BỘ diện tích đất của dự án, kể cả phần kinh doanh dịch vụ - thương mại.`);
   if (isFinite(r.gia_noxh_can) && r.gia_noxh_can > 25000000 * 1.001) push("warn", `Giá bán NOXH cần để đạt LN mục tiêu (${fmt0(r.gia_noxh_can)} đ/m²) vượt khung phổ biến Hà Nội (18–25 triệu/m²).`);
   push("ok", `Cơ sở đối chiếu: QCVN 01:2026/BXD ban hành kèm TT 46/2026/TT-BXD ngày 30/6/2026, hiệu lực 01/01/2027, thay thế QCVN 01:2021/BXD. Quy hoạch đã phê duyệt/thẩm định trước ngày hiệu lực tiếp tục thực hiện theo quyết định duyệt; trường hợp điều chỉnh quy hoạch sau ngày hiệu lực phải tuân thủ quy chuẩn mới (mục 5.4).`);
   return w;
@@ -1638,6 +1640,13 @@ function NOXHCalculator() {
     }
   }, "\uD83D\uDCF0 Tham kh\u1EA3o"), /*#__PURE__*/React.createElement("button", {
     type: "button",
+    onClick: () => setMode("model"),
+    style: { padding: "7px 14px", borderRadius: "6px", border: "none", fontSize: "13px",
+      fontWeight: 600, cursor: "pointer",
+      background: mode === "model" ? "#C8932E" : "transparent",
+      color: mode === "model" ? "#fff" : "#B9C4D6" }
+  }, "\uD83D\uDCCA M\u00F4 h\u00ECnh t\u00E0i ch\u00EDnh"), /*#__PURE__*/React.createElement("button", {
+    type: "button",
     onClick: () => setMode("ai"),
     style: {
       padding: "7px 14px",
@@ -1740,6 +1749,9 @@ function NOXHCalculator() {
         fontWeight: 600
       }
     }, "M\u1EDF b\u00E0i vi\u1EBFt g\u1ED1c \u2197")))));
+  }
+  if (mode === "model") {
+    return /*#__PURE__*/React.createElement(ModelTab, { v: v, setField: setField, header: modeSwitcher });
   }
   if (mode === "ai") {
     return /*#__PURE__*/React.createElement("div", {
@@ -3676,6 +3688,2119 @@ async function exportToWord(v, r, warns) {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
+
+/* ============================================================================
+   MODULE "MÔ HÌNH TÀI CHÍNH" v2 — dựng theo mẫu
+   "BÁO CÁO TÓM TẮT ĐẦU TƯ - DỰ ÁN KHU NHÀ Ở XÃ HỘI BẮC ĐẠI KIM" (7/2026)
+
+   Nguyên tắc tính toán:
+   1. Giá bán = (Chi phí đầu tư xây dựng phần NOXH × 1,10) ÷ Diện tích thông
+      thủy phần NOXH  —  khoản 2 Điều 85 Luật Nhà ở 2023. Giá bán KHÔNG xác
+      định theo giá thị trường.
+   2. Chi phí trực tiếp phân bổ theo đối tượng thụ hưởng thực tế; chi phí gián
+      tiếp phân bổ theo tỷ trọng chi phí trực tiếp. Phần TM-DV hạch toán riêng,
+      không tính vào giá thành NOXH và không bị khống chế lợi nhuận.
+   3. Lập song song hai phương án: PA1 (giữ nguyên tiêu chuẩn thiết kế, tính đủ
+      các khoản bị bỏ sót) và PA2 (kiến nghị, áp dụng 6 giải pháp tối ưu).
+   4. Miễn tiền sử dụng đất toàn bộ diện tích đất dự án (Điều 85 Luật Nhà ở
+      2023; Luật Đất đai 2024, NĐ 103/2024/NĐ-CP).
+   5. Quy mô tầng hầm xác định TỪ nhu cầu đỗ xe, không từ mật độ ngầm định trước.
+   ============================================================================ */
+
+const MODEL_DEFAULTS = {
+  // Thông tin chung
+  md_ten_da: "Khu nhà ở xã hội Bắc Đại Kim",
+  md_diadiem: "Phường Định Công, Thành phố Hà Nội",
+  md_chudautu: "Liên danh Handhud - Hòa Bình",
+  md_nguoi_lap: "Mai Triệu Quang",
+  md_thoigian: 48,
+  // A. Khu đất & quy hoạch
+  md_dt_dat: 9650, md_md_de: 40, md_tang_de: 3, md_md_thap: 30, md_tang_thap: 32,
+  md_so_thap: 3, md_chieucao_tang: 3.25,
+  md_tang_ham: 2, md_md_ham: 95, md_hs_tt: 72, md_kdc_ham: 88.5,
+  md_san_nhatre: 1600, md_san_tienich: 2300, md_hs_tm: 85,
+  // A2. Cơ cấu căn hộ
+  md_ch1_ten: "1PN (36-40 m²)", md_ch1_dt: 38, md_ch1_tl: 25, md_ch1_nk: 2.2,
+  md_ch2_ten: "2PN (54-58 m²)", md_ch2_dt: 56, md_ch2_tl: 55, md_ch2_nk: 3.5,
+  md_ch3_ten: "3PN (66-70 m²)", md_ch3_dt: 68, md_ch3_tl: 20, md_ch3_nk: 4.5,
+  // B. Chỉ tiêu đỗ xe & cân đối hầm
+  md_ct_oto_o: 333, md_ct_oto_tm: 200, md_dt_1oto: 30,
+  md_xemay_can: 2, md_dt_1xemay: 2.8, md_ky_thuat_ham: 2100, md_ram_doc: 2100,
+  // B2. Hạ tầng xã hội
+  md_ct_nhatre: 0.6, md_ct_tieuhoc: 0.8, md_ct_cayxanh: 2, md_ct_cayxanh_lo: 20,
+  // C. Suất vốn & chi phí đầu tư (PA2)
+  md_sv_thap: 11.8, md_sv_de: 16, md_sv_ham: 18, md_mong_coc: 78,
+  md_dg_gpmb: 10, md_rapha: 5, md_ht_noikhu: 12, md_ht_ngoairanh: 25,
+  md_tl_thietbi: 14.12, md_pccc: 20, md_tb_nhatre: 12,
+  md_tl_qlda: 1.2, md_tl_tuvan: 4, md_tl_khac: 1.5,
+  md_cp_banhang: 12, md_cp_vanhanhtam: 16, md_tl_duphong: 7,
+  // D. Tài chính (PA2)
+  md_tl_vonvay: 60, md_duno_bq: 45, md_ls_vay: 6.6, md_tg_vay: 2.5,
+  md_ln_dinhmuc: 10, md_thue_noxh: 10, md_thue_tm: 20, md_vcsh_min: 20, md_ck: 9,
+  // E. Doanh thu
+  md_tl_chothue: 25,
+  md_san_tm1: 2800, md_dg_tm1: 100, md_san_tm2: 2440, md_dg_tm2: 50,
+  md_san_tm3: 2440, md_dg_tm3: 40,
+  md_gia_thue: 75000, md_lapday: 88, md_vh_thue: 16, md_nam_thue: 20, md_tang_gia: 4,
+  // F. Tiến độ giải ngân & thu tiền (%)
+  md_chi1: 10.55, md_chi2: 38, md_chi3: 40.11, md_chi4: 11.34,
+  md_thu_noxh2: 30, md_thu_noxh3: 40, md_thu_noxh4: 30,
+  md_thu_tm3: 20, md_thu_tm4: 80,
+  // H. Phương án 1 — giữ nguyên tiêu chuẩn thiết kế
+  md1_tang_ham: 3, md1_md_ham: 80, md1_sv_thap: 13.5, md1_mong_coc: 88,
+  md1_pccc: 22, md1_cp_banhang: 14, md1_cp_vanhanhtam: 18, md1_tl_duphong: 10,
+  md1_ls_vay: 8, md1_duno_bq: 50, md1_ct_oto_o: 200,
+  // I. Đối chiếu với báo cáo trước
+  md_old_ten: "Báo cáo ngày 22/7/2026",
+  md_old_tangham: 3, md_old_san_ham: 17370, md_old_ngam: 0,
+  md_old_truocdp: 1697.63, md_old_duphong: 94.05, md_old_laivay: 183.34,
+  md_old_tmdt: 1975.02, md_old_socan: 953, md_old_gia: 35,
+  md_old_dt_noxh: 1750.91, md_old_gt_thue: 645.23, md_old_dt_tm: 750.42,
+  md_old_lntt: 1171.54, md_old_tsln: 59.3
+};
+
+const PA1_MAP = {
+  md_tang_ham: "md1_tang_ham", md_md_ham: "md1_md_ham", md_sv_thap: "md1_sv_thap",
+  md_mong_coc: "md1_mong_coc", md_pccc: "md1_pccc", md_cp_banhang: "md1_cp_banhang",
+  md_cp_vanhanhtam: "md1_cp_vanhanhtam", md_tl_duphong: "md1_tl_duphong",
+  md_ls_vay: "md1_ls_vay", md_duno_bq: "md1_duno_bq", md_ct_oto_o: "md1_ct_oto_o"
+};
+function toPA1(S) {
+  const o = Object.assign({}, S);
+  for (const k in PA1_MAP) o[k] = S[PA1_MAP[k]];
+  return o;
+}
+
+const MODEL_SECTIONS = [
+  { title: "A · Khu đất & quy hoạch", fields: [
+    { k: "md_dt_dat", l: "Diện tích khu đất", u: "m²", s: 50 },
+    { k: "md_md_de", l: "Mật độ xây dựng khối đế", u: "%", s: 1 },
+    { k: "md_tang_de", l: "Số tầng khối đế", u: "tầng", s: 1 },
+    { k: "md_md_thap", l: "Mật độ xây dựng khối tháp", u: "%", s: 1 },
+    { k: "md_tang_thap", l: "Số tầng khối tháp", u: "tầng", s: 1 },
+    { k: "md_so_thap", l: "Số lượng tháp", u: "tháp", s: 1 },
+    { k: "md_chieucao_tang", l: "Chiều cao tầng điển hình", u: "m", s: 0.05 },
+    { k: "md_tang_ham", l: "Số tầng hầm (PA2)", u: "tầng", s: 1 },
+    { k: "md_md_ham", l: "Mật độ xây dựng ngầm (PA2)", u: "%", s: 1 },
+    { k: "md_hs_tt", l: "Hệ số thông thủy / GFA", u: "%", s: 1, key: true },
+    { k: "md_san_nhatre", l: "Diện tích sàn nhà trẻ", u: "m²", s: 50 },
+    { k: "md_san_tienich", l: "Diện tích sàn tiện ích chung", u: "m²", s: 50 },
+    { k: "md_hs_tm", l: "Hiệu suất diện tích thương mại", u: "%", s: 1 }
+  ]},
+  { title: "A2 · Cơ cấu căn hộ", fields: [
+    { k: "md_ch1_dt", l: "Loại 1 — diện tích thông thủy", u: "m²", s: 1 },
+    { k: "md_ch1_tl", l: "Loại 1 — tỷ lệ số căn", u: "%", s: 1 },
+    { k: "md_ch1_nk", l: "Loại 1 — số nhân khẩu / căn", u: "người", s: 0.1 },
+    { k: "md_ch2_dt", l: "Loại 2 — diện tích thông thủy", u: "m²", s: 1 },
+    { k: "md_ch2_tl", l: "Loại 2 — tỷ lệ số căn", u: "%", s: 1 },
+    { k: "md_ch2_nk", l: "Loại 2 — số nhân khẩu / căn", u: "người", s: 0.1 },
+    { k: "md_ch3_dt", l: "Loại 3 — diện tích thông thủy", u: "m²", s: 1 },
+    { k: "md_ch3_tl", l: "Loại 3 — tỷ lệ số căn", u: "%", s: 1 },
+    { k: "md_ch3_nk", l: "Loại 3 — số nhân khẩu / căn", u: "người", s: 0.1 }
+  ]},
+  { title: "B · Chỉ tiêu đỗ xe & hạ tầng xã hội", fields: [
+    { k: "md_ct_oto_o", l: "Chỉ tiêu ô tô căn hộ (PA2)", u: "m² sàn/chỗ", s: 1, key: true },
+    { k: "md_ct_oto_tm", l: "Chỉ tiêu ô tô TM-DV", u: "m² sàn/chỗ", s: 1 },
+    { k: "md_dt_1oto", l: "Diện tích 1 chỗ ô tô (kể cả đường nội bộ)", u: "m²", s: 1 },
+    { k: "md_xemay_can", l: "Số xe máy / căn hộ", u: "xe", s: 0.5 },
+    { k: "md_dt_1xemay", l: "Diện tích 1 xe máy (kể cả lối đi)", u: "m²", s: 0.1 },
+    { k: "md_ky_thuat_ham", l: "Phòng kỹ thuật, bể nước, bơm PCCC, TBA", u: "m²", s: 50 },
+    { k: "md_ram_doc", l: "Ram dốc, thang bộ, sảnh hầm, tường vây", u: "m²", s: 50 },
+    { k: "md_ct_nhatre", l: "Chỉ tiêu đất nhà trẻ", u: "m²/người", s: 0.05 },
+    { k: "md_ct_tieuhoc", l: "Chỉ tiêu đất trường tiểu học", u: "m²/người", s: 0.05 },
+    { k: "md_ct_cayxanh", l: "Chỉ tiêu cây xanh công cộng", u: "m²/người", s: 0.1 },
+    { k: "md_ct_cayxanh_lo", l: "Cây xanh trong lô tối thiểu", u: "% diện tích đất", s: 1 }
+  ]},
+  { title: "C · Suất vốn & chi phí đầu tư (PA2)", fields: [
+    { k: "md_sv_thap", l: "Suất vốn xây dựng khối tháp", u: "tr/m² sàn", s: 0.1, key: true },
+    { k: "md_sv_de", l: "Suất vốn xây dựng khối đế", u: "tr/m² sàn", s: 0.1 },
+    { k: "md_sv_ham", l: "Suất vốn xây dựng tầng hầm", u: "tr/m² sàn", s: 0.1, key: true },
+    { k: "md_kdc_ham", l: "Kdc — hệ số cho phần hầm mở rộng ngoài hình chiếu nổi", u: "%", s: 0.5, key: true },
+    { k: "md_mong_coc", l: "Móng cọc khoan nhồi, tường vây, xử lý nền", u: "tỷ đ", s: 1, key: true },
+    { k: "md_dg_gpmb", l: "Đơn giá bồi thường, GPMB", u: "tr/m²", s: 0.5, key: true },
+    { k: "md_rapha", l: "Rà phá bom mìn, khảo sát địa hình - địa chất", u: "tỷ đ", s: 1 },
+    { k: "md_ht_noikhu", l: "Hạ tầng kỹ thuật nội khu", u: "tỷ đ", s: 1 },
+    { k: "md_ht_ngoairanh", l: "Hạ tầng kỹ thuật ngoài ranh, đấu nối, TBA", u: "tỷ đ", s: 1 },
+    { k: "md_tl_thietbi", l: "Tỷ lệ chi phí thiết bị / chi phí xây dựng", u: "%", s: 0.5 },
+    { k: "md_pccc", l: "PCCC chuyên dụng, kiểm định, nghiệm thu", u: "tỷ đ", s: 1 },
+    { k: "md_tb_nhatre", l: "Trang thiết bị nhà trẻ, nhà sinh hoạt cộng đồng", u: "tỷ đ", s: 1 },
+    { k: "md_tl_qlda", l: "Tỷ lệ quản lý dự án", u: "%", s: 0.1 },
+    { k: "md_tl_tuvan", l: "Tỷ lệ tư vấn đầu tư xây dựng", u: "%", s: 0.1 },
+    { k: "md_tl_khac", l: "Tỷ lệ chi phí khác", u: "%", s: 0.1 },
+    { k: "md_cp_banhang", l: "Chi phí bán hàng, quản lý bán hàng", u: "tỷ đ", s: 1 },
+    { k: "md_cp_vanhanhtam", l: "Vận hành tạm, chạy thử, nghiệm thu bàn giao", u: "tỷ đ", s: 1 },
+    { k: "md_tl_duphong", l: "Tỷ lệ dự phòng phí", u: "%", s: 0.5, key: true }
+  ]},
+  { title: "D · Thông số tài chính (PA2)", fields: [
+    { k: "md_tl_vonvay", l: "Tỷ lệ vốn vay / tổng chi phí", u: "%", s: 1 },
+    { k: "md_duno_bq", l: "Dư nợ bình quân trong thời gian xây dựng", u: "%", s: 1, key: true },
+    { k: "md_ls_vay", l: "Lãi suất vay", u: "%/năm", s: 0.1, key: true },
+    { k: "md_tg_vay", l: "Thời gian vay trong giai đoạn xây dựng", u: "năm", s: 0.5 },
+    { k: "md_ln_dinhmuc", l: "Lợi nhuận định mức tối đa phần NOXH (RÀNG BUỘC CỨNG)", u: "%", s: 1, key: true },
+    { k: "md_thue_noxh", l: "Thuế TNDN phần NOXH", u: "%", s: 1 },
+    { k: "md_thue_tm", l: "Thuế TNDN phần TM-DV", u: "%", s: 1 },
+    { k: "md_vcsh_min", l: "Vốn chủ sở hữu tối thiểu / TMĐT", u: "%", s: 1 },
+    { k: "md_ck", l: "Suất chiết khấu", u: "%/năm", s: 0.5 },
+    { k: "md_thoigian", l: "Thời gian thực hiện dự án", u: "tháng", s: 1 }
+  ]},
+  { title: "E · Doanh thu", fields: [
+    { k: "md_tl_chothue", l: "Tỷ lệ diện tích NOXH dành cho thuê", u: "%", s: 1, key: true },
+    { k: "md_san_tm1", l: "Diện tích sàn TM tầng 1", u: "m²", s: 20 },
+    { k: "md_dg_tm1", l: "Đơn giá TM tầng 1", u: "tr/m² TT", s: 5 },
+    { k: "md_san_tm2", l: "Diện tích sàn TM tầng 2", u: "m²", s: 20 },
+    { k: "md_dg_tm2", l: "Đơn giá TM tầng 2", u: "tr/m² TT", s: 5 },
+    { k: "md_san_tm3", l: "Diện tích sàn TM tầng 3", u: "m²", s: 20 },
+    { k: "md_dg_tm3", l: "Đơn giá TM tầng 3", u: "tr/m² TT", s: 5 },
+    { k: "md_gia_thue", l: "Giá thuê NOXH", u: "đ/m²/tháng", s: 5000 },
+    { k: "md_lapday", l: "Tỷ lệ lấp đầy phần cho thuê", u: "%", s: 1 },
+    { k: "md_vh_thue", l: "Chi phí vận hành phần cho thuê", u: "% doanh thu", s: 1 },
+    { k: "md_nam_thue", l: "Số năm tính giá trị hiện tại dòng tiền thuê", u: "năm", s: 1 },
+    { k: "md_tang_gia", l: "Tốc độ tăng giá NOXH danh nghĩa", u: "%/năm", s: 0.5 }
+  ]},
+  { title: "F · Tiến độ giải ngân & thu tiền", fields: [
+    { k: "md_chi1", l: "Chi đầu tư năm 1", u: "% TMĐT", s: 1 },
+    { k: "md_chi2", l: "Chi đầu tư năm 2", u: "% TMĐT", s: 1 },
+    { k: "md_chi3", l: "Chi đầu tư năm 3", u: "% TMĐT", s: 1 },
+    { k: "md_chi4", l: "Chi đầu tư năm 4", u: "% TMĐT", s: 1 },
+    { k: "md_thu_noxh2", l: "Thu tiền bán NOXH năm 2", u: "%", s: 5 },
+    { k: "md_thu_noxh3", l: "Thu tiền bán NOXH năm 3", u: "%", s: 5 },
+    { k: "md_thu_noxh4", l: "Thu tiền bán NOXH năm 4", u: "%", s: 5 },
+    { k: "md_thu_tm3", l: "Thu tiền TM-DV năm 3", u: "%", s: 5 },
+    { k: "md_thu_tm4", l: "Thu tiền TM-DV năm 4", u: "%", s: 5 }
+  ]},
+  { title: "H · Phương án 1 (giữ nguyên tiêu chuẩn thiết kế)", fields: [
+    { k: "md1_tang_ham", l: "Số tầng hầm", u: "tầng", s: 1 },
+    { k: "md1_md_ham", l: "Mật độ xây dựng ngầm", u: "%", s: 1 },
+    { k: "md1_ct_oto_o", l: "Chỉ tiêu ô tô căn hộ", u: "m² sàn/chỗ", s: 1 },
+    { k: "md1_sv_thap", l: "Suất vốn xây dựng khối tháp", u: "tr/m² sàn", s: 0.1 },
+    { k: "md1_mong_coc", l: "Móng cọc, tường vây, xử lý nền", u: "tỷ đ", s: 1 },
+    { k: "md1_pccc", l: "PCCC chuyên dụng, kiểm định", u: "tỷ đ", s: 1 },
+    { k: "md1_cp_banhang", l: "Chi phí bán hàng", u: "tỷ đ", s: 1 },
+    { k: "md1_cp_vanhanhtam", l: "Vận hành tạm, nghiệm thu", u: "tỷ đ", s: 1 },
+    { k: "md1_tl_duphong", l: "Tỷ lệ dự phòng phí", u: "%", s: 0.5 },
+    { k: "md1_ls_vay", l: "Lãi suất vay", u: "%/năm", s: 0.1 },
+    { k: "md1_duno_bq", l: "Dư nợ bình quân", u: "%", s: 1 }
+  ]},
+  { title: "I · Đối chiếu với báo cáo trước", fields: [
+    { k: "md_old_tangham", l: "Số tầng hầm (bản cũ)", u: "tầng", s: 1 },
+    { k: "md_old_san_ham", l: "Diện tích sàn hầm (bản cũ)", u: "m²", s: 100 },
+    { k: "md_old_ngam", l: "Chi phí xây dựng phần ngầm (bản cũ)", u: "tỷ đ", s: 10 },
+    { k: "md_old_truocdp", l: "Chi phí trước dự phòng, lãi vay (bản cũ)", u: "tỷ đ", s: 10 },
+    { k: "md_old_duphong", l: "Dự phòng phí (bản cũ)", u: "tỷ đ", s: 10 },
+    { k: "md_old_laivay", l: "Lãi vay (bản cũ)", u: "tỷ đ", s: 10 },
+    { k: "md_old_tmdt", l: "Tổng mức đầu tư (bản cũ)", u: "tỷ đ", s: 10 },
+    { k: "md_old_socan", l: "Số căn hộ (bản cũ)", u: "căn", s: 10 },
+    { k: "md_old_gia", l: "Giá bán NOXH (bản cũ)", u: "tr/m² TT", s: 0.5 },
+    { k: "md_old_dt_noxh", l: "Doanh thu bán NOXH (bản cũ)", u: "tỷ đ", s: 10 },
+    { k: "md_old_gt_thue", l: "Giá trị phần cho thuê (bản cũ)", u: "tỷ đ", s: 10 },
+    { k: "md_old_dt_tm", l: "Doanh thu TM-DV (bản cũ)", u: "tỷ đ", s: 10 },
+    { k: "md_old_lntt", l: "Lợi nhuận trước thuế (bản cũ)", u: "tỷ đ", s: 10 },
+    { k: "md_old_tsln", l: "Tỷ suất lợi nhuận / TMĐT (bản cũ)", u: "%", s: 1 }
+  ]}
+];
+
+// ---------------------------------------------------------------------------
+// Lõi tính toán
+// ---------------------------------------------------------------------------
+function computeModel(S) {
+  const dat = S.md_dt_dat;
+  const fp_de = dat * S.md_md_de / 100;
+  const san_de = fp_de * S.md_tang_de;
+  const fp_thap = dat * S.md_md_thap / 100;
+  const san_thap = fp_thap * S.md_tang_thap;
+  const gfa = san_de + san_thap;
+  const far = dat ? gfa / dat : 0;
+  const san_ham = dat * S.md_md_ham / 100 * S.md_tang_ham;
+  const san_xd = gfa + san_ham;
+  const tong_tang = S.md_tang_de + S.md_tang_thap;
+  const cao_ct = tong_tang * S.md_chieucao_tang;
+
+  const san_tm = san_de - S.md_san_nhatre - S.md_san_tienich;
+  const san_tm_kb = S.md_san_tm1 + S.md_san_tm2 + S.md_san_tm3;
+  const lech_tm = san_tm_kb - san_tm;
+  const tt_canho = san_thap * S.md_hs_tt / 100;
+  const tt_tm = san_tm * S.md_hs_tm / 100;
+  const tl_tm_gfa = gfa ? san_tm / gfa : 0;
+
+  // Cơ cấu căn hộ
+  const dtbq = (S.md_ch1_dt * S.md_ch1_tl + S.md_ch2_dt * S.md_ch2_tl + S.md_ch3_dt * S.md_ch3_tl) / 100;
+  const so_can = Math.floor(tt_canho / dtbq);
+  const n1 = Math.round(so_can * S.md_ch1_tl / 100);
+  const n2 = Math.round(so_can * S.md_ch2_tl / 100);
+  const n3 = so_can - n1 - n2;
+  const cocau = [
+    { ten: S.md_ch1_ten, dt: S.md_ch1_dt, n: n1, tong: n1 * S.md_ch1_dt, nk: Math.round(n1 * S.md_ch1_nk) },
+    { ten: S.md_ch2_ten, dt: S.md_ch2_dt, n: n2, tong: n2 * S.md_ch2_dt, nk: Math.round(n2 * S.md_ch2_nk) },
+    { ten: S.md_ch3_ten, dt: S.md_ch3_dt, n: n3, tong: n3 * S.md_ch3_dt, nk: Math.round(n3 * S.md_ch3_nk) }
+  ];
+  const dan_so = cocau.reduce((a, c) => a + c.nk, 0);
+  const so_can_thue = Math.round(so_can * S.md_tl_chothue / 100);
+  const so_can_ban = so_can - so_can_thue;
+
+  // Đỗ xe & hầm
+  const oto_o = Math.floor(tt_canho / S.md_ct_oto_o);
+  const oto_tm = Math.floor(san_tm / S.md_ct_oto_tm);
+  const oto_tong = oto_o + oto_tm;
+  const cho_tren_can = so_can ? oto_o / so_can : 0;
+  const xe_may = Math.round(so_can * S.md_xemay_can);
+  const dt_oto = oto_tong * S.md_dt_1oto;
+  const dt_oto_tm = oto_tm * S.md_dt_1oto;
+  const dt_xemay = xe_may * S.md_dt_1xemay;
+  const nhu_cau_ham = dt_oto + dt_xemay + S.md_ky_thuat_ham + S.md_ram_doc;
+  const can_doi_ham = san_ham - nhu_cau_ham;
+
+  // Hạ tầng xã hội
+  const htxh = {
+    nhatre: dan_so * S.md_ct_nhatre,
+    tieuhoc: dan_so * S.md_ct_tieuhoc,
+    cayxanh: dan_so * S.md_ct_cayxanh,
+    cayxanh_lo: dat * S.md_ct_cayxanh_lo / 100
+  };
+
+  // Tổng mức đầu tư (tỷ đồng)
+  const c_gpmb = dat * S.md_dg_gpmb / 1000;
+  // QĐ 425: bảng suất vốn chỉ áp dụng khi DT xây dựng hầm tương đương DT xây dựng nổi.
+  // Phần hầm nằm ngoài hình chiếu tầng nổi được quy đổi bằng hệ số Kdc.
+  const fp_ham = dat * S.md_md_ham / 100;
+  const ham_trong = Math.min(fp_ham, fp_de) * S.md_tang_ham;
+  const ham_mr = Math.max(0, fp_ham - fp_de) * S.md_tang_ham;
+  const kdc = S.md_kdc_ham / 100;
+  const c_ngam = (ham_trong * S.md_sv_ham + ham_mr * S.md_sv_ham * kdc) / 1000;
+  const c_de = san_de * S.md_sv_de / 1000;
+  const c_thap = san_thap * S.md_sv_thap / 1000;
+  const c_xd3 = c_ngam + c_de + c_thap;
+  const c_tb = c_xd3 * S.md_tl_thietbi / 100;
+  const base_gt = c_xd3 + S.md_mong_coc + c_tb + S.md_pccc;
+  const c_qlda = base_gt * S.md_tl_qlda / 100;
+  const c_tuvan = base_gt * S.md_tl_tuvan / 100;
+  const c_khac = base_gt * S.md_tl_khac / 100;
+  const A = c_gpmb + S.md_rapha + S.md_ht_noikhu + S.md_ht_ngoairanh
+    + S.md_mong_coc + c_ngam + c_de + c_thap + c_tb + S.md_pccc + S.md_tb_nhatre
+    + c_qlda + c_tuvan + c_khac + S.md_cp_banhang + S.md_cp_vanhanhtam;
+  const c_dp = A * S.md_tl_duphong / 100;
+  const c_laivay = (A + c_dp) * S.md_tl_vonvay / 100 * S.md_duno_bq / 100
+    * S.md_ls_vay / 100 * S.md_tg_vay;
+  const tmdt = A + c_dp + c_laivay;
+  const suat_dt = san_xd ? tmdt * 1000 / san_xd : 0;
+  const von_vay = tmdt * S.md_tl_vonvay / 100;
+
+  // Phân bổ chi phí & giá bán
+  const cp_tt = c_xd3;
+  const de_tm = san_de ? san_tm / san_de * c_de : 0;
+  const de_noxh = c_de - de_tm;
+  const ham_tm = nhu_cau_ham ? dt_oto_tm / nhu_cau_ham * c_ngam : 0;
+  const ham_noxh = c_ngam - ham_tm;
+  const cp_tt_noxh = cp_tt - de_tm - ham_tm;
+  const w_noxh = cp_tt ? cp_tt_noxh / cp_tt : 0;
+  const cp_gt = tmdt - cp_tt;
+  const gt_noxh = cp_gt * w_noxh;
+  const gt_tm = cp_gt * (1 - w_noxh);
+  const cp_noxh = cp_tt_noxh + gt_noxh;
+  const cp_tm = (de_tm + ham_tm) + gt_tm;
+  const gia_thanh = tt_canho ? cp_noxh * 1000 / tt_canho : 0;
+  const ln_dm_dv = gia_thanh * S.md_ln_dinhmuc / 100;
+  const gia_max = gia_thanh + ln_dm_dv;
+  // Làm tròn XUỐNG mức 0,5 triệu: giá bán áp dụng không được vượt giá bán tối đa,
+  // vì vượt là vi phạm trần lợi nhuận định mức tại khoản 2 Điều 85 Luật Nhà ở 2023.
+  const gia_ban = Math.floor(gia_max * 2) / 2;
+
+  // Doanh thu & hiệu quả
+  const m2_ban = tt_canho * (1 - S.md_tl_chothue / 100);
+  const m2_thue = tt_canho * S.md_tl_chothue / 100;
+  const dt_noxh = m2_ban * gia_ban / 1000;
+  const gt_thue = m2_thue * gia_ban / 1000;
+  const tmTang = [
+    { ten: "Tầng 1 (mặt phố)", san: S.md_san_tm1, tt: S.md_san_tm1 * S.md_hs_tm / 100, dg: S.md_dg_tm1 },
+    { ten: "Tầng 2", san: S.md_san_tm2, tt: S.md_san_tm2 * S.md_hs_tm / 100, dg: S.md_dg_tm2 },
+    { ten: "Tầng 3", san: S.md_san_tm3, tt: S.md_san_tm3 * S.md_hs_tm / 100, dg: S.md_dg_tm3 }
+  ].map(x => Object.assign(x, { tien: x.tt * x.dg / 1000 }));
+  const dt_tm = tmTang.reduce((a, x) => a + x.tien, 0);
+  const dt_tong = dt_noxh + gt_thue + dt_tm;
+  const lntt = dt_tong - tmdt;
+  const ln_noxh = (dt_noxh + gt_thue) - cp_noxh;
+  const tl_ln_noxh = cp_noxh ? ln_noxh / cp_noxh * 100 : 0;
+  const ln_tm = dt_tm - cp_tm;
+  const tt_ln_tm = lntt ? ln_tm / lntt * 100 : 0;
+  const thue_tndn = ln_noxh * S.md_thue_noxh / 100 + ln_tm * S.md_thue_tm / 100;
+  const lnst = lntt - thue_tndn;
+  const ts_ln_tmdt = tmdt ? lntt / tmdt * 100 : 0;
+  const vcsh = tmdt * S.md_vcsh_min / 100;
+
+  // Phần cho thuê
+  const thue_thang_can = so_can_thue ? m2_thue * S.md_gia_thue / so_can_thue : 0;
+  const thue_nam = m2_thue * S.md_gia_thue * 12 * (S.md_lapday / 100)
+    * (1 - S.md_vh_thue / 100) / 1e9;
+  const ck = S.md_ck / 100;
+  const pvA = ck > 0 ? (1 - Math.pow(1 + ck, -S.md_nam_thue)) / ck : S.md_nam_thue;
+  const pv_thue = thue_nam * pvA;
+  const ts_thue = gt_thue ? thue_nam / gt_thue * 100 : 0;
+  const gap_thue = gt_thue - pv_thue;
+
+  return {
+    fp_de, san_de, fp_thap, san_thap, gfa, far, san_ham, san_xd, tong_tang, cao_ct,
+    fp_ham, ham_trong, ham_mr, kdc,
+    san_tm, san_tm_kb, lech_tm, tt_canho, tt_tm, tl_tm_gfa,
+    dtbq, so_can, cocau, dan_so, so_can_ban, so_can_thue,
+    oto_o, oto_tm, oto_tong, cho_tren_can, xe_may, dt_oto, dt_oto_tm, dt_xemay,
+    nhu_cau_ham, can_doi_ham, htxh,
+    c_gpmb, c_ngam, c_de, c_thap, c_xd3, c_tb, c_qlda, c_tuvan, c_khac,
+    A, c_dp, c_laivay, tmdt, suat_dt, von_vay,
+    cp_tt, de_tm, de_noxh, ham_tm, ham_noxh, cp_tt_noxh, w_noxh, cp_gt, gt_noxh, gt_tm,
+    cp_noxh, cp_tm, gia_thanh, ln_dm_dv, gia_max, gia_ban,
+    m2_ban, m2_thue, dt_noxh, gt_thue, tmTang, dt_tm, dt_tong,
+    lntt, ln_noxh, tl_ln_noxh, ln_tm, tt_ln_tm, thue_tndn, lnst, ts_ln_tmdt, vcsh, von_vay,
+    thue_thang_can, thue_nam, pvA, pv_thue, ts_thue, gap_thue
+  };
+}
+
+function irrOf(cf) {
+  const npv = k => cf.reduce((s, c, i) => s + c / Math.pow(1 + k, i + 1), 0);
+  let lo = -0.95, hi = 5;
+  if (npv(lo) * npv(hi) > 0) return NaN;
+  for (let i = 0; i < 200; i++) {
+    const mid = (lo + hi) / 2;
+    if (npv(lo) * npv(mid) <= 0) hi = mid; else lo = mid;
+  }
+  return (lo + hi) / 2;
+}
+
+/** mode: 'giu' | 'chuyen' | 'ban' */
+function cashflowModel(S, R, tlChoThue, mode) {
+  const gia = R.gia_ban, tt = R.tt_canho;
+  const m2_ban = tt * (1 - tlChoThue / 100);
+  const m2_thue = tt * tlChoThue / 100;
+  const dtban = m2_ban * gia / 1000;
+  const gtts = m2_thue * gia / 1000;
+  const thue_nam = m2_thue * S.md_gia_thue * 12 * (S.md_lapday / 100)
+    * (1 - S.md_vh_thue / 100) / 1e9;
+  const chi = [S.md_chi1, S.md_chi2, S.md_chi3, S.md_chi4].map(x => -R.tmdt * x / 100);
+  const thuN = [0, S.md_thu_noxh2, S.md_thu_noxh3, S.md_thu_noxh4].map(x => dtban * x / 100);
+  const thuT = [0, 0, S.md_thu_tm3, S.md_thu_tm4].map(x => R.dt_tm * x / 100);
+  const tien = [0, 1, 2, 3].map(i => chi[i] + thuN[i] + thuT[i]);
+  const cf = tien.slice();
+  const pv = thue_nam * R.pvA;
+  if (mode === "giu") cf[3] += pv;
+  if (mode === "chuyen") {
+    for (let y = 0; y < 5; y++) cf.push(thue_nam);
+    cf.push(gtts * Math.pow(1 + S.md_tang_gia / 100, 5) + thue_nam);
+  }
+  let acc = 0;
+  const luyke = tien.map(x => (acc += x));
+  return { cf, tien, luyke, dtban, gtts, thue_nam, pv, chi, thuN, thuT, irr: irrOf(cf) };
+}
+
+const MODEL_PA = [
+  { label: "Giữ 25% cho thuê vĩnh viễn (phương án đang đề xuất)", tl: null, mode: "giu",
+    danhgia: "Không khả thi về tài chính" },
+  { label: "Giữ 20% cho thuê vĩnh viễn", tl: 20, mode: "giu",
+    danhgia: "Cải thiện nhưng vẫn thấp" },
+  { label: "Giữ 25% cho thuê, được chuyển nhượng sau 5 năm cho đối tượng thụ hưởng theo giá NOXH tại thời điểm bán",
+    tl: null, mode: "chuyen", danhgia: "Chấp nhận được" },
+  { label: "Bán 100%, không giữ phần cho thuê", tl: 0, mode: "ban",
+    danhgia: "Hiệu quả cao" }
+];
+
+/** Độ nhạy — trình bày theo giá bán tối đa và chênh giá, giống Bảng 10.1 của mẫu */
+function modelScenarios(S) {
+  const list = [
+    { label: "Cơ sở (PA2)", patch: {} },
+    { label: "Suất vốn khối tháp +10% (" + nfM(S.md_sv_thap * 1.1, 2) + " tr/m²)",
+      patch: { md_sv_thap: S.md_sv_thap * 1.1 } },
+    { label: "Suất vốn khối tháp -10% (" + nfM(S.md_sv_thap * 0.9, 2) + " tr/m²)",
+      patch: { md_sv_thap: S.md_sv_thap * 0.9 } },
+    { label: "GPMB " + nfM(S.md_dg_gpmb * 1.5, 0) + " tr/m²", patch: { md_dg_gpmb: S.md_dg_gpmb * 1.5 } },
+    { label: "GPMB " + nfM(S.md_dg_gpmb * 0.5, 0) + " tr/m²", patch: { md_dg_gpmb: S.md_dg_gpmb * 0.5 } },
+    { label: "Lãi vay thương mại " + nfM(S.md_ls_vay + 2.9, 1) + "%/năm", patch: { md_ls_vay: S.md_ls_vay + 2.9 } },
+    { label: "Dự phòng " + nfM(S.md1_tl_duphong, 0) + "% thay " + nfM(S.md_tl_duphong, 0) + "%",
+      patch: { md_tl_duphong: S.md1_tl_duphong } },
+    { label: "Giữ " + S.md1_tang_ham + " tầng hầm (PA1)",
+      patch: { md_tang_ham: S.md1_tang_ham, md_md_ham: S.md1_md_ham,
+        md_ct_oto_o: S.md1_ct_oto_o, md_mong_coc: S.md1_mong_coc } },
+    { label: "Hiệu suất thông thủy " + nfM((S.md_hs_tt - 4) / 100, 2) + " thay " + nfM(S.md_hs_tt / 100, 2),
+      patch: { md_hs_tt: S.md_hs_tt - 4 } }
+  ];
+  const base = computeModel(S);
+  return list.map(sc => {
+    const s = Object.assign({}, S, sc.patch);
+    const R = computeModel(s);
+    return { label: sc.label, s, R, patch: sc.patch, chenh: R.gia_max - base.gia_max };
+  });
+}
+
+/** Sáu giải pháp tối ưu chi phí — chênh lệch từng khoản mục giữa PA1 và PA2 */
+function modelGiaiPhap(S, R1, R2) {
+  return [
+    { gp: "Giảm từ " + S.md1_tang_ham + " xuống " + S.md_tang_ham + " tầng hầm, nâng mật độ xây dựng ngầm lên "
+        + S.md_md_ham + "%, áp dụng chỉ tiêu đỗ xe tối thiểu cho NOXH",
+      giam: R1.c_ngam - R2.c_ngam,
+      dk: "Cần chấp thuận chỉ giới xây dựng ngầm và chỉ tiêu đỗ xe" },
+    { gp: "Tối ưu thiết kế khối tháp: mặt bằng điển hình module hóa, giảm số lõi thang, hoàn thiện theo tiêu chuẩn NOXH (suất vốn "
+        + nfM(S.md1_sv_thap, 1) + " → " + nfM(S.md_sv_thap, 1) + " tr/m²)",
+      giam: R1.c_thap - R2.c_thap,
+      dk: "Thiết kế cơ sở phải bám sát định hướng này" },
+    { gp: "Sử dụng gói tín dụng ưu đãi NOXH (" + nfM(S.md_ls_vay, 1) + "%/năm) và giải ngân theo tiến độ",
+      giam: R1.c_laivay - R2.c_laivay,
+      dk: "Đăng ký gói tín dụng ưu đãi" },
+    { gp: "Rút ngắn tiến độ thi công, giảm dự phòng trượt giá (" + nfM(S.md1_tl_duphong, 0)
+        + "% → " + nfM(S.md_tl_duphong, 0) + "%)",
+      giam: R1.c_dp - R2.c_dp,
+      dk: "Phụ thuộc tiến độ GPMB và thủ tục" },
+    { gp: "Giảm quy mô móng do giảm 1 tầng hầm",
+      giam: S.md1_mong_coc - S.md_mong_coc,
+      dk: "Xác nhận sau khảo sát địa chất" },
+    { gp: "Bảo lưu quyền hoàn trả / khấu trừ chi phí bồi thường, giải phóng mặt bằng",
+      giam: R2.c_gpmb, thuhoi: true,
+      dk: "Văn bản đề nghị gửi cơ quan có thẩm quyền" }
+  ];
+}
+
+const MODEL_RUIRO = [
+  ["Giá bán theo phương pháp chi phí cao hơn mặt bằng NOXH được phê duyệt tại Hà Nội", "Cao", "Rất nghiêm trọng",
+    "Áp dụng đồng bộ 6 giải pháp tối ưu; trao đổi trước với Sở Xây dựng về khung giá dự kiến trước khi triển khai thiết kế cơ sở"],
+  ["Chi phí bồi thường, giải phóng mặt bằng vượt dự kiến", "Cao", "Trung bình",
+    "Rà soát Bảng giá đất hiện hành; bảo lưu quyền hoàn trả hoặc khấu trừ"],
+  ["Không được chấp thuận phương án tầng hầm rút gọn hoặc chỉ tiêu đỗ xe tối thiểu", "Trung bình", "Nghiêm trọng",
+    "Làm việc trước với cơ quan quản lý quy hoạch; chuẩn bị phương án tầng hầm dự phòng"],
+  ["Địa chất bất lợi làm tăng chi phí móng, tường vây", "Trung bình", "Nghiêm trọng",
+    "Khảo sát địa chất ngay trong giai đoạn chuẩn bị đầu tư"],
+  ["Rủi ro quyết toán: giá theo kiểm toán thấp hơn giá đã ký hợp đồng", "Trung bình", "Nghiêm trọng",
+    "Xây dựng giá bán thận trọng, dưới trần định mức; kiểm soát chặt chi phí thực tế"],
+  ["Phần cho thuê không đạt tỷ lệ lấp đầy", "Trung bình", "Trung bình",
+    "Xây dựng phương án quản lý vận hành chuyên nghiệp; liên kết doanh nghiệp, khu công nghiệp"],
+  ["Không xác nhận được liên kết hạ tầng xã hội ngoài ranh", "Trung bình", "Trung bình",
+    "Bố trí nhà trẻ trong dự án; xin xác nhận sớm của cơ quan quản lý quy hoạch"],
+  ["Chậm tiến độ thủ tục làm tăng chi phí trượt giá và lãi vay", "Trung bình", "Trung bình",
+    "Tận dụng cơ chế rút ngắn thời gian thủ tục của Thành phố"]
+];
+
+const MODEL_KIENNGHI = [
+  ["Hướng dẫn xác định trình tự thủ tục áp dụng cho dự án (giao chủ đầu tư theo cơ chế đặc thù hay chấp thuận chủ trương đầu tư)", "Sở Xây dựng", "Ngay"],
+  ["Xác nhận cơ chế xử lý đối với phần NOXH cho thuê (quyền chuyển nhượng sau 5 năm và/hoặc nguồn vốn vay dài hạn ưu đãi)", "UBND Thành phố / Sở Xây dựng", "Ngay"],
+  ["Trao đổi trước về khung giá bán NOXH dự kiến trước khi triển khai thiết kế cơ sở", "Sở Xây dựng", "Tháng 1-2"],
+  ["Chấp thuận chỉ giới xây dựng ngầm và chỉ tiêu đỗ xe tối thiểu áp dụng cho NOXH", "Cơ quan quản lý quy hoạch", "Tháng 1-3"],
+  ["Xác nhận việc liên kết hạ tầng xã hội ngoài ranh theo Quy hoạch phân khu", "Cơ quan quản lý quy hoạch", "Tháng 1-3"],
+  ["Khảo sát địa chất và lập phương án móng, tầng hầm", "Chủ đầu tư", "Tháng 1-4"],
+  ["Bổ sung hồ sơ năng lực tài chính, chứng minh vốn chủ sở hữu tối thiểu", "Chủ đầu tư", "Tháng 1-2"],
+  ["Bảo lưu quyền hoàn trả hoặc khấu trừ chi phí GPMB đã ứng trước", "Chủ đầu tư", "Ngay"],
+  ["Đăng ký gói tín dụng ưu đãi phát triển NOXH", "Chủ đầu tư", "Tháng 3-6"],
+  ["Lập báo cáo đánh giá tác động môi trường", "Chủ đầu tư", "Tháng 4-8"]
+];
+
+const MODEL_PHULUCB = [
+  ["Tên pháp nhân đầy đủ của các thành viên liên danh, thỏa thuận liên danh, tỷ lệ góp vốn, phân công trách nhiệm", "Bắt buộc"],
+  ["Hồ sơ chứng minh năng lực tài chính và kinh nghiệm của từng thành viên liên danh", "Bắt buộc"],
+  ["Văn bản xác định nguồn gốc quỹ đất và hình thức lựa chọn nhà đầu tư", "Bắt buộc"],
+  ["Trích lục Quy hoạch phân khu và bản đồ địa chính khu đất", "Bắt buộc"],
+  ["Sơ đồ vị trí, ranh giới, hiện trạng sử dụng đất, mặt bằng tổng thể, mặt cắt điển hình", "Bắt buộc"],
+  ["Báo cáo kết quả khảo sát địa chất công trình", "Bắt buộc trước khi chốt phương án móng, hầm"],
+  ["Phương án phòng cháy chữa cháy và thoát nạn cho nhà cao tầng", "Bắt buộc"],
+  ["Phương án giao thông kết nối, cấp điện, cấp nước, thoát nước, xử lý nước thải", "Bắt buộc"],
+  ["Đối tượng, điều kiện thụ hưởng và phương án bán, cho thuê, cho thuê mua", "Bắt buộc"],
+  ["Phương án quản lý vận hành phần NOXH cho thuê", "Bắt buộc"],
+  ["Kết quả thẩm tra giá bán, giá thuê mua của đơn vị tư vấn đủ điều kiện năng lực", "Trước khi phê duyệt giá"],
+  ["Báo cáo đánh giá tác động môi trường", "Song song thiết kế cơ sở"]
+];
+
+const MODEL_PHAPLY = [
+  ["Luật Nhà ở số 27/2023/QH15", "Điều 85: ưu đãi chủ đầu tư NOXH - miễn tiền sử dụng đất toàn bộ diện tích đất dự án; được dành tối đa 20% tổng diện tích sàn để kinh doanh dịch vụ - thương mại; được tăng hệ số sử dụng đất hoặc mật độ xây dựng tối đa 1,5 lần; lợi nhuận định mức tối đa 10% chi phí đầu tư xây dựng phần NOXH"],
+  ["Nghị quyết 201/2025/QH15", "Thí điểm cơ chế đặc thù: giao chủ đầu tư dự án NOXH không thông qua đấu thầu; dự án NOXH không phải thực hiện thủ tục chấp thuận chủ trương đầu tư và thẩm định báo cáo nghiên cứu khả thi; chủ đầu tư lập quy hoạch chi tiết 1/500"],
+  ["Nghị định 192/2025/NĐ-CP", "Quy định chi tiết thi hành Nghị quyết 201/2025/QH15; chủ đầu tư tự xây dựng hoặc thuê tư vấn đủ điều kiện năng lực thẩm tra giá bán, giá thuê mua trước khi phê duyệt"],
+  ["Nghị định 100/2024/NĐ-CP (sửa đổi, bổ sung bởi Nghị định 261/2025/NĐ-CP)", "Quy định chi tiết Luật Nhà ở về phát triển và quản lý NOXH; tiêu chuẩn diện tích căn hộ; phương pháp xác định giá bán, giá thuê mua, giá thuê"],
+  ["Luật Đất đai số 31/2024/QH15 và Nghị định 103/2024/NĐ-CP", "Miễn tiền sử dụng đất, tiền thuê đất; hoàn trả hoặc khấu trừ chi phí bồi thường, giải phóng mặt bằng do chủ đầu tư ứng trước"],
+  ["Luật Đầu tư 2020; Luật Xây dựng 2014 (sửa đổi 2020); Luật Kinh doanh bất động sản 2023", "Trình tự chấp thuận chủ trương / giao chủ đầu tư; quản lý chi phí; điều kiện kinh doanh bất động sản hình thành trong tương lai; vốn chủ sở hữu tối thiểu 20% tổng mức đầu tư đối với dự án dưới 20 ha"],
+  ["Luật Quy hoạch đô thị và nông thôn 2024", "Trình tự lập, thẩm định, phê duyệt quy hoạch chi tiết tỷ lệ 1/500"],
+  ["QCVN 01:2021/BXD (Thông tư 01/2021/TT-BXD)", "Quy chuẩn quy hoạch xây dựng - văn bản ĐANG CÓ HIỆU LỰC tại thời điểm lập và thẩm định hồ sơ"],
+  ["QCVN 01:2026/BXD (Thông tư 46/2026/TT-BXD ngày 30/6/2026)", "Thay thế QCVN 01:2021/BXD, hiệu lực từ 01/01/2027 - sử dụng để kiểm tra dự phòng cho giai đoạn triển khai sau mốc này"],
+  ["QCVN 04:2021/BXD; QCVN 06:2022/BXD", "Quy chuẩn nhà chung cư (chỗ đỗ xe, diện tích căn hộ, tiện ích); an toàn cháy cho nhà và công trình"],
+  ["Quy hoạch phân khu đô thị của khu vực dự án", "Chỉ tiêu quy hoạch được duyệt (cần đính kèm trích lục làm phụ lục hồ sơ)"],
+  ["Chỉ thị của UBND Thành phố về đẩy mạnh phát triển NOXH", "Cơ chế rút ngắn thủ tục; khuyến khích chủ đầu tư tăng tỷ lệ NOXH cho thuê trong dự án mới"]
+];
+
+function modelTienDo(S) {
+  const t = S.md_thoigian, g1 = Math.round(t * 0.25), g2 = Math.round(t * 0.625), g3 = Math.round(t * 0.875);
+  return [
+    ["Giai đoạn 1", "Tháng 1 - " + g1,
+      "Chấp thuận chủ trương / giao chủ đầu tư; lập và phê duyệt quy hoạch chi tiết 1/500; khảo sát địa chất; giao đất; giải phóng mặt bằng; thiết kế cơ sở; thẩm duyệt PCCC; giấy phép xây dựng",
+      "Đủ điều kiện khởi công"],
+    ["Giai đoạn 2", "Tháng " + (g1 + 1) + " - " + g2,
+      "Thi công phần ngầm (tường vây, cọc, " + S.md_tang_ham + " tầng hầm); thi công kết cấu thân; mở bán từ khi đủ điều kiện",
+      "Hoàn thành phần thô"],
+    ["Giai đoạn 3", "Tháng " + (g2 + 1) + " - " + g3,
+      "Hoàn thiện; lắp đặt thiết bị; hạ tầng kỹ thuật; cảnh quan; nghiệm thu PCCC", "Hoàn thành công trình"],
+    ["Giai đoạn 4", "Tháng " + (g3 + 1) + " - " + t,
+      "Nghiệm thu, bàn giao căn hộ; đưa phần cho thuê vào vận hành; kiểm toán, quyết toán, phê duyệt giá bán chính thức",
+      "Kết thúc đầu tư"]
+  ];
+}
+
+function modelChecks(S, R) {
+  const w = [];
+  const P = (lv, t) => w.push({ level: lv, text: t });
+  if (Math.abs(R.lech_tm) > 1)
+    P("danger", `Diện tích sàn TM khai báo theo tầng (${nfM(R.san_tm_kb, 0)} m²) lệch ${nfM(R.lech_tm, 0)} m² so với diện tích sàn còn lại của khối đế (${nfM(R.san_tm, 0)} m²). Phải cân bằng trước khi sử dụng kết quả.`);
+  else P("ok", "Diện tích sàn thương mại khai báo theo tầng khớp với diện tích sàn còn lại của khối đế.");
+  if (R.tl_tm_gfa > 0.2)
+    P("danger", `Diện tích sàn kinh doanh dịch vụ - thương mại chiếm ${nfM(R.tl_tm_gfa * 100, 1)}% tổng diện tích sàn, vượt trần 20% tại Điều 85 Luật Nhà ở 2023.`);
+  else P("ok", `Diện tích sàn TM-DV chiếm ${nfM(R.tl_tm_gfa * 100, 1)}% tổng diện tích sàn — dưới trần 20% (Điều 85 Luật Nhà ở 2023).`);
+  const dtMin = Math.min(S.md_ch1_dt, S.md_ch2_dt, S.md_ch3_dt);
+  const dtMax = Math.max(S.md_ch1_dt, S.md_ch2_dt, S.md_ch3_dt);
+  if (dtMin < 25 || dtMax > 70)
+    P("danger", `Cơ cấu căn hộ có loại nằm ngoài giới hạn 25 - 70 m² thông thủy (nhỏ nhất ${nfM(dtMin, 1)} m², lớn nhất ${nfM(dtMax, 1)} m²).`);
+  else P("ok", `Cơ cấu căn hộ ${nfM(dtMin, 0)} - ${nfM(dtMax, 0)} m² thông thủy, bình quân ${nfM(R.dtbq, 1)} m² — trong giới hạn 25 - 70 m².`);
+  const tlCC = S.md_ch1_tl + S.md_ch2_tl + S.md_ch3_tl;
+  if (Math.abs(tlCC - 100) > 0.5)
+    P("warn", `Tỷ lệ cơ cấu căn hộ cộng lại ${nfM(tlCC, 1)}%, khác 100%.`);
+  if (R.can_doi_ham < 0)
+    P("danger", `Tầng hầm THIẾU ${nfM(-R.can_doi_ham, 0)} m² so với nhu cầu đỗ xe và kỹ thuật. Phải tăng số tầng hầm hoặc mật độ xây dựng ngầm.`);
+  else P("ok", `Tầng hầm cân đối, thừa ${nfM(R.can_doi_ham, 0)} m² so với nhu cầu ${nfM(R.nhu_cau_ham, 0)} m².`);
+  if (R.cho_tren_can < 0.2)
+    P("warn", `Chỉ tiêu đỗ xe ô tô chỉ đạt ${nfM(R.cho_tren_can, 2)} chỗ/căn. Đây là mức tối thiểu áp dụng cho NOXH, cần được cơ quan quản lý quy hoạch chấp thuận riêng; nếu không đạt phải quay lại phương án tăng tầng hầm.`);
+  if (R.tl_ln_noxh > S.md_ln_dinhmuc + 0.001)
+    P("danger", `Lợi nhuận phần NOXH đạt ${nfM(R.tl_ln_noxh, 1)}% chi phí đầu tư phần NOXH, VƯỢT trần ${S.md_ln_dinhmuc}% tại khoản 2 Điều 85 Luật Nhà ở 2023 do làm tròn giá bán lên. Hạ giá bán áp dụng xuống mức 0,5 triệu kế tiếp.`);
+  else P("ok", `Lợi nhuận phần NOXH đạt ${nfM(R.tl_ln_noxh, 1)}% chi phí đầu tư phần NOXH — trong trần ${S.md_ln_dinhmuc}% (khoản 2 Điều 85 Luật Nhà ở 2023).`);
+  const tongChi = S.md_chi1 + S.md_chi2 + S.md_chi3 + S.md_chi4;
+  if (Math.abs(tongChi - 100) > 0.5) P("warn", `Tiến độ giải ngân cộng lại ${nfM(tongChi, 2)}%, khác 100%.`);
+  const tongThu = S.md_thu_noxh2 + S.md_thu_noxh3 + S.md_thu_noxh4;
+  if (Math.abs(tongThu - 100) > 0.5) P("warn", `Tiến độ thu tiền bán NOXH cộng lại ${nfM(tongThu, 2)}%, khác 100%.`);
+  if (R.ts_thue < S.md_ck)
+    P("warn", `Tỷ suất sinh lời phần NOXH cho thuê chỉ ${nfM(R.ts_thue, 2)}%/năm, thấp hơn suất chiết khấu ${nfM(S.md_ck, 1)}%/năm. Khoảng cách giá trị ${nfM(R.gap_thue, 2)} tỷ đồng là phần vốn bị chôn.`);
+  if (R.tt_ln_tm > 50)
+    P("warn", `${nfM(R.tt_ln_tm, 0)}% lợi nhuận dự án đến từ phần kinh doanh dịch vụ - thương mại chỉ chiếm ${nfM(R.tl_tm_gfa * 100, 1)}% diện tích sàn. Phải bảo đảm được diện tích và vị trí thương mại như phương án.`);
+  P("ok", "Tiền sử dụng đất được miễn cho toàn bộ diện tích đất dự án theo Điều 85 Luật Nhà ở 2023 — mô hình đặt khoản mục này bằng 0.");
+  return w;
+}
+
+// ---------------------------------------------------------------------------
+// Định dạng
+// ---------------------------------------------------------------------------
+const nfM = (n, d) => isFinite(n)
+  ? n.toLocaleString("vi-VN", { minimumFractionDigits: d, maximumFractionDigits: d })
+  : "—";
+const pcM = (n, d) => isFinite(n) ? nfM(n, d === undefined ? 1 : d) + "%" : "—";
+const sgM = (n, d) => (n > 0 ? "+" : "") + nfM(n, d === undefined ? 2 : d);
+
+function slugVN(s) {
+  return String(s || "NOXH").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d").replace(/Đ/g, "D").replace(/[^A-Za-z0-9]+/g, "");
+}
+function downloadBlob(blob, name) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = name;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/* ============================================================================
+   MODULE ĐỐI CHIẾU QUYẾT ĐỊNH 425/QĐ-BXD ngày 30/3/2026
+   Công bố suất vốn đầu tư xây dựng và giá xây dựng tổng hợp bộ phận kết cấu
+   công trình năm 2025. Mặt bằng giá Quý IV/2025.
+
+   LƯU Ý CỐT LÕI KHI ÁP DỤNG (Phần 1, mục I.2 của QĐ 425):
+   - Suất vốn đầu tư ĐÃ GỒM: chi phí xây dựng + chi phí thiết bị + chi phí quản
+     lý dự án + chi phí tư vấn ĐTXD + một số chi phí khác + THUẾ GTGT 10%.
+     => Nếu lấy số ở cột "Suất vốn đầu tư" rồi CỘNG THÊM thiết bị, QLDA, tư vấn
+        thì bị TÍNH TRÙNG. Muốn cộng thêm thì phải lấy cột "Chi phí xây dựng".
+   - Suất vốn CHƯA GỒM: dự phòng phí; bồi thường, hỗ trợ, tái định cư; lãi vay
+     trong thời gian thực hiện đầu tư; gia cố đặc biệt về nền móng công trình;
+     đánh giá tác động môi trường; kiểm định chất lượng; BIM; tư vấn nước ngoài.
+     => Móng cọc khoan nhồi, tường vây, xử lý nền là khoản BỔ SUNG hợp lệ.
+   - Suất vốn tính trên 1 m² TỔNG DIỆN TÍCH SÀN XÂY DỰNG, bao gồm cả tầng hầm,
+     tầng nửa hầm, tầng kỹ thuật, tầng áp mái, tầng mái tum.
+   - Bảng tính cho trường hợp DIỆN TÍCH XÂY DỰNG TẦNG HẦM TƯƠNG ĐƯƠNG DIỆN TÍCH
+     XÂY DỰNG TẦNG NỔI. Nếu hầm rộng hơn nổi thì phần mở rộng phải quy đổi theo
+     hệ số Kdc:  >1,0 - 2,0 lần → Kdc từ <1 đến 0,92
+                 >2,0 - 3,5 lần → Kdc từ <0,92 đến 0,85
+   - Quy đổi về thời điểm/địa điểm: S = S0 × Ktg × Kkv + ΣSTi
+     Ktg = Itt/Iot (chỉ số giá xây dựng địa phương); Kkv tham khảo Phần 4
+     Quyết định 409/QĐ-BXD ngày 11/4/2025.
+   ============================================================================ */
+
+const QD425_TANG = [
+  { l: "Số tầng ≤ 5", max: 5 }, { l: "5 < số tầng ≤ 7", max: 7 },
+  { l: "7 < số tầng ≤ 10", max: 10 }, { l: "10 < số tầng ≤ 15", max: 15 },
+  { l: "15 < số tầng ≤ 20", max: 20 }, { l: "20 < số tầng ≤ 24", max: 24 },
+  { l: "24 < số tầng ≤ 30", max: 30 }, { l: "30 < số tầng ≤ 35", max: 35 },
+  { l: "35 < số tầng ≤ 40", max: 40 }, { l: "40 < số tầng ≤ 45", max: 45 },
+  { l: "45 < số tầng ≤ 50", max: 50 }
+];
+
+/* Mỗi hàng: 6 phương án hầm (0,1,2,3,4,5) — [suất vốn, chi phí xây dựng, chi phí thiết bị]
+   Đơn vị: 1.000 đồng/m² sàn xây dựng, đã gồm thuế GTGT 10%, mặt bằng giá Q4/2025 */
+const QD425_CHUNGCU = [
+  [[9202,7784,432],[10529,8931,470],[11175,9448,530],[11793,10002,593],[13024,11046,654],[14247,12082,716]],
+  [[10316,8082,724],[11033,8643,774],[11772,9223,826],[12637,9900,886],[13561,10623,951],[14527,11380,1019]],
+  [[10629,8458,758],[11122,8850,793],[11671,9286,832],[12344,9822,881],[13091,10417,934],[13896,11057,991]],
+  [[11132,9041,758],[11450,9301,780],[11829,9608,806],[12320,10006,839],[12883,10465,877],[13512,10975,920]],
+  [[12410,9521,1034],[12590,9660,1049],[12830,9843,1069],[13168,10102,1096],[13576,10416,1131],[14048,10778,1170]],
+  [[13818,10611,1367],[13923,10691,1377],[14083,10814,1393],[14335,11008,1418],[14655,11255,1450],[15037,11548,1488]],
+  [[14508,11144,1436],[14570,11191,1442],[14679,11274,1453],[14868,11420,1472],[15116,11610,1496],[15420,11843,1526]],
+  [[15849,12000,1700],[15890,12031,1705],[15978,12096,1714],[16138,12217,1731],[16356,12382,1754],[16625,12587,1783]],
+  [[17024,12791,1907],[17050,12810,1910],[17117,12861,1917],[17255,12965,1933],[17445,13108,1954],[17688,13289,1982]],
+  [[18197,13581,2113],[18216,13596,2116],[18276,13641,2122],[18401,13733,2137],[18577,13866,2158],[18803,14035,2184]],
+  [[19370,14373,2320],[19381,14381,2321],[19430,14418,2328],[19541,14499,2341],[19702,14620,2360],[19912,14774,2386]]
+];
+
+const QD425_DANANG = [
+  [[9246,7888,517],[10263,8732,598],[11468,9754,671],[12159,10524,747],[13389,11586,822],[14612,12645,897]],
+  [[10851,8673,942],[11531,9215,1001],[12243,9783,1063],[13090,10460,1136],[14001,11189,1215],[14961,11957,1298]],
+  [[11182,9067,976],[11647,9444,1017],[12172,9870,1063],[12830,10404,1121],[13565,11000,1184],[13565,11000,1184]],
+  [[11696,9700,1332],[11993,9946,1367],[12353,10245,1407],[12828,10638,1461],[13381,11097,1525],[14001,11610,1595]],
+  [[13031,10215,1585],[13191,10341,1604],[13413,10513,1632],[13736,10768,1671],[14134,11080,1720],[14597,11443,1776]],
+  [[14516,11375,1769],[14601,11441,1780],[14744,11554,1797],[14982,11740,1826],[15291,11982,1864],[15663,12273,1909]],
+  [[15240,11954,1860],[15285,11990,1866],[15380,12064,1878],[15556,12202,1900],[15794,12388,1929],[16087,12619,1964]],
+  [[16656,12863,2206],[16682,12884,2209],[16754,12939,2218],[16902,13054,2238],[17109,13213,2266],[17369,13414,2300]],
+  [[17881,13721,2470],[17892,13728,2471],[17946,13770,2479],[18071,13866,2496],[18251,14004,2521],[18484,14183,2553]],
+  [[19116,14564,2734],[19122,14568,2734],[19170,14605,2741],[19284,14692,2758],[19453,14820,2781],[19672,14987,2813]],
+  [[20340,15420,3010],[20342,15423,3010],[20385,15454,3016],[20492,15535,3032],[20650,15656,3055],[20858,15812,3086]]
+];
+
+/** Tra bảng QĐ 425. loai: 'danang' | 'chungcu'. Trả về tr đ/m² sàn xây dựng. */
+function qd425Lookup(loai, soTang, soHam) {
+  let ri = QD425_TANG.findIndex(x => soTang <= x.max);
+  const capTang = ri < 0;
+  if (capTang) ri = QD425_TANG.length - 1;
+  const hi = Math.max(0, Math.min(5, Math.round(soHam)));
+  const capHam = soHam > 5;
+  const row = (loai === "chungcu" ? QD425_CHUNGCU : QD425_DANANG)[ri][hi];
+  return {
+    ma: (loai === "chungcu" ? "11110." : "11260.") + String(ri + 1).padStart(2, "0"),
+    nhom: QD425_TANG[ri].l, ham: hi === 0 ? "không có tầng hầm" : "có " + hi + " tầng hầm",
+    svdt: row[0] / 1000, cpxd: row[1] / 1000, cptb: row[2] / 1000,
+    capTang: capTang, capHam: capHam
+  };
+}
+
+/** Đối chiếu phương án của mô hình với QĐ 425 */
+function qd425Check(S, R) {
+  const q = qd425Lookup(S.q425_loai, R.tong_tang, S.md_tang_ham);
+  const K = (S.q425_ktg / 100) * (S.q425_kkv / 100);
+  const vat = S.q425_vat / 100;
+
+  // Suất vốn công bố, đã quy đổi thời điểm/địa điểm
+  const svdt_cb = q.svdt * K, cpxd_cb = q.cpxd * K, cptb_cb = q.cptb * K;
+
+  // Suất của phương án (tr đ/m² tổng sàn xây dựng), chưa gồm VAT
+  const cpxd_pa = R.san_xd ? R.c_xd3 * 1000 / R.san_xd : 0;
+  const cptb_pa = R.san_xd ? (R.c_tb + S.md_pccc) * 1000 / R.san_xd : 0;
+  // Suất vốn đầu tư tương đương: xây dựng + thiết bị + QLDA + tư vấn + khác
+  const svdt_pa = R.san_xd
+    ? (R.c_xd3 + R.c_tb + S.md_pccc + R.c_qlda + R.c_tuvan + R.c_khac) * 1000 / R.san_xd : 0;
+  // Quy về cùng mặt bằng có VAT để so sánh với số công bố
+  const f = 1 + vat;
+  const cpxd_pa_vat = cpxd_pa * f, cptb_pa_vat = cptb_pa * f, svdt_pa_vat = svdt_pa * f;
+
+  // Tỷ lệ diện tích xây dựng hầm / nổi -> hệ số Kdc phần mở rộng
+  const nxd_ham = S.md_dt_dat * S.md_md_ham / 100;
+  const nxd_noi = S.md_dt_dat * S.md_md_de / 100;
+  const tyle_ham = nxd_noi ? nxd_ham / nxd_noi : 0;
+  let kdc_dai = "Không phải điều chỉnh (hầm ≤ nổi)";
+  if (tyle_ham > 3.5) kdc_dai = "Vượt phạm vi bảng Kdc (> 3,5 lần) — phải lập dự toán riêng cho phần hầm mở rộng";
+  else if (tyle_ham > 2) kdc_dai = "Kdc từ < 0,92 đến 0,85";
+  else if (tyle_ham > 1) kdc_dai = "Kdc từ < 1 đến 0,92";
+
+  const lech = (a, b) => b ? (a - b) / b * 100 : 0;
+  return {
+    q: q, K: K, svdt_cb: svdt_cb, cpxd_cb: cpxd_cb, cptb_cb: cptb_cb,
+    cpxd_pa: cpxd_pa, cptb_pa: cptb_pa, svdt_pa: svdt_pa,
+    cpxd_pa_vat: cpxd_pa_vat, cptb_pa_vat: cptb_pa_vat, svdt_pa_vat: svdt_pa_vat,
+    d_cpxd: lech(cpxd_pa_vat, cpxd_cb), d_cptb: lech(cptb_pa_vat, cptb_cb),
+    d_svdt: lech(svdt_pa_vat, svdt_cb),
+    nxd_ham: nxd_ham, nxd_noi: nxd_noi, tyle_ham: tyle_ham, kdc_dai: kdc_dai,
+    // Ước tính theo QĐ 425 để so sánh tổng mức
+    tmdt_425: svdt_cb * R.san_xd / 1000 + S.md_mong_coc + R.c_gpmb + S.md_rapha
+      + S.md_ht_noikhu + S.md_ht_ngoairanh + S.md_tb_nhatre + S.md_cp_banhang + S.md_cp_vanhanhtam
+  };
+}
+
+function qd425Warnings(S, R, Q) {
+  const w = [];
+  const P = (lv, t) => w.push({ level: lv, text: t });
+  P("ok", "Cơ sở đối chiếu: Quyết định 425/QĐ-BXD ngày 30/3/2026 của Bộ Xây dựng, công bố suất vốn đầu tư xây dựng năm 2025, mặt bằng giá Quý IV/2025. Chỉ tiêu áp dụng: "
+    + Q.q.ma + " — " + (S.q425_loai === "chungcu" ? "công trình nhà chung cư" : "công trình đa năng (hỗn hợp)")
+    + ", " + Q.q.nhom + ", " + Q.q.ham + ".");
+  if (Q.q.capTang)
+    P("warn", "Công trình " + nfM(R.tong_tang, 0) + " tầng vượt phạm vi công bố của QĐ 425 (tối đa 50 tầng). Đang dùng nhóm cao nhất; phải lập suất vốn riêng theo hướng dẫn của Bộ Xây dựng.");
+  if (S.q425_loai === "chungcu" && R.tl_tm_gfa > 0.05)
+    P("warn", "Dự án có " + nfM(R.tl_tm_gfa * 100, 1) + "% diện tích sàn kinh doanh dịch vụ - thương mại nên thuộc loại CÔNG TRÌNH ĐA NĂNG (hỗn hợp) theo QĐ 425, không phải nhà chung cư thuần túy. Nên chuyển sang tra Bảng 26.");
+  P("warn", "Suất vốn đầu tư tại QĐ 425 ĐÃ BAO GỒM chi phí thiết bị, quản lý dự án, tư vấn đầu tư xây dựng, một số chi phí khác và thuế GTGT 10%. Nếu lấy số ở cột \"Suất vốn đầu tư\" rồi cộng thêm các khoản này thì bị tính trùng khoảng 14%. Mô hình đang lấy cột \"Chi phí xây dựng\" làm gốc và cộng riêng các khoản — cách này đúng, nhưng phải bảo đảm suất vốn nhập vào là suất CHI PHÍ XÂY DỰNG chưa gồm VAT.");
+  const d = Q.d_cpxd;
+  if (Math.abs(d) > 15)
+    P("danger", "Suất chi phí xây dựng của phương án (" + nfM(Q.cpxd_pa_vat, 3) + " tr/m² sàn xây dựng, đã qui về có VAT " + nfM(S.q425_vat, 0) + "%) lệch " + sgM(d, 1) + "% so với mức công bố " + nfM(Q.cpxd_cb, 3) + " tr/m². Chênh lệch quá lớn, phải giải trình bằng thiết kế cơ sở và dự toán chi tiết.");
+  else if (Math.abs(d) > 7)
+    P("warn", "Suất chi phí xây dựng của phương án (" + nfM(Q.cpxd_pa_vat, 3) + " tr/m²) lệch " + sgM(d, 1) + "% so với QĐ 425 (" + nfM(Q.cpxd_cb, 3) + " tr/m²). Cần thuyết minh nguyên nhân trong hồ sơ.");
+  else
+    P("ok", "Suất chi phí xây dựng của phương án (" + nfM(Q.cpxd_pa_vat, 3) + " tr/m²) lệch " + sgM(d, 1) + "% so với QĐ 425 (" + nfM(Q.cpxd_cb, 3) + " tr/m²) — nằm trong dung sai chấp nhận được ở giai đoạn chuẩn bị đầu tư.");
+  const dt = Q.d_cptb;
+  if (dt < -25)
+    P("danger", "Chi phí thiết bị của phương án chỉ " + nfM(Q.cptb_pa_vat, 3) + " tr/m², THẤP HƠN " + nfM(-dt, 0) + "% so với mức công bố " + nfM(Q.cptb_cb, 3) + " tr/m². Chi phí thiết bị theo QĐ 425 gồm thang máy, trạm biến áp, thiết bị vận hành, máy bơm cấp nước và phòng cháy chữa cháy. Với nhà " + nfM(R.tong_tang, 0) + " tầng, mức thiết bị hiện tại nhiều khả năng chưa đủ cho hệ thang máy và trạm biến áp.");
+  else if (Math.abs(dt) > 15)
+    P("warn", "Chi phí thiết bị của phương án (" + nfM(Q.cptb_pa_vat, 3) + " tr/m²) lệch " + sgM(dt, 1) + "% so với QĐ 425 (" + nfM(Q.cptb_cb, 3) + " tr/m²).");
+  else
+    P("ok", "Chi phí thiết bị của phương án (" + nfM(Q.cptb_pa_vat, 3) + " tr/m²) lệch " + sgM(dt, 1) + "% so với QĐ 425 — phù hợp.");
+  if (Q.tyle_ham > 1)
+    P("danger", "Diện tích xây dựng tầng hầm (" + nfM(Q.nxd_ham, 0) + " m²) gấp " + nfM(Q.tyle_ham, 2)
+      + " lần diện tích xây dựng tầng nổi (" + nfM(Q.nxd_noi, 0) + " m²). Bảng suất vốn của QĐ 425 chỉ áp dụng khi hai diện tích này TƯƠNG ĐƯƠNG. Phần hầm mở rộng phải quy đổi theo công thức riêng với hệ số điều chỉnh: " + Q.kdc_dai + ". Mô hình chưa áp dụng hệ số này — đây là nội dung phải bổ sung khi lập tổng mức đầu tư chính thức.");
+  P("ok", "Các khoản QĐ 425 KHÔNG bao gồm và đã được tính riêng trong mô hình: bồi thường - giải phóng mặt bằng ("
+    + nfM(R.c_gpmb, 2) + " tỷ), gia cố đặc biệt nền móng - móng cọc, tường vây (" + nfM(S.md_mong_coc, 2)
+    + " tỷ), dự phòng phí (" + nfM(R.c_dp, 2) + " tỷ), lãi vay trong thời gian xây dựng (" + nfM(R.c_laivay, 2) + " tỷ).");
+  P("warn", "Suất vốn công bố là bình quân cả nước tại mặt bằng giá Quý IV/2025. Phải quy đổi về thời điểm và địa điểm lập tổng mức đầu tư theo công thức S = S₀ × Ktg × Kkv + ΣSTi, trong đó Ktg lấy theo chỉ số giá xây dựng do địa phương công bố, Kkv tham khảo Phần 4 Quyết định 409/QĐ-BXD ngày 11/4/2025. Hệ số đang áp dụng: Ktg = "
+    + nfM(S.q425_ktg / 100, 3) + ", Kkv = " + nfM(S.q425_kkv / 100, 3) + ".");
+  return w;
+}
+
+/** Khuyến nghị hiệu chỉnh về mức QĐ 425 (tính lại theo trạng thái hiện tại) */
+function qd425Recommend(S, R) {
+  const Q = qd425Check(S, R);
+  const f = 1 + S.q425_vat / 100;
+  const tb_can = Q.cptb_cb / f * R.san_xd / 1000;
+  const tl_tb = R.c_xd3 ? (tb_can - S.md_pccc) / R.c_xd3 * 100 : S.md_tl_thietbi;
+  const k = Q.cpxd_pa_vat ? Q.cpxd_cb / Q.cpxd_pa_vat : 1;
+  let kdc = 100;
+  if (Q.tyle_ham > 3.5) kdc = 85; else if (Q.tyle_ham > 2) kdc = 88.5;
+  else if (Q.tyle_ham > 1) kdc = 96;
+  return { Q: Q, tb_can: tb_can, tl_tb: tl_tb, k: k, kdc: kdc,
+    sv_thap: S.md_sv_thap * k, sv_de: S.md_sv_de * k, sv_ham: S.md_sv_ham * k };
+}
+
+// Bổ sung giả thiết đối chiếu QĐ 425
+Object.assign(MODEL_DEFAULTS, {
+  q425_loai: "danang", q425_ktg: 100, q425_kkv: 100, q425_vat: 10
+});
+MODEL_SECTIONS.push({ title: "K · Đối chiếu QĐ 425/QĐ-BXD", fields: [
+  { k: "q425_ktg", l: "Ktg — hệ số quy đổi thời điểm (chỉ số giá XD)", u: "%", s: 1, key: true },
+  { k: "q425_kkv", l: "Kkv — hệ số quy đổi vùng (Phần 4 QĐ 409/QĐ-BXD)", u: "%", s: 1, key: true },
+  { k: "q425_vat", l: "Thuế GTGT để quy về cùng mặt bằng so sánh", u: "%", s: 1 }
+]});
+
+function ModelTab({ v, setField, header }) {
+  const h = React.createElement;
+  const R2 = React.useMemo(() => computeModel(v), [v]);
+  const R1 = React.useMemo(() => computeModel(toPA1(v)), [v]);
+  const checks = React.useMemo(() => modelChecks(v, R2), [v, R2]);
+  const Q = React.useMemo(() => qd425Check(v, R2), [v, R2]);
+  const R425 = React.useMemo(() => qd425Recommend(v, R2), [v, R2]);
+  const qw = React.useMemo(() => qd425Warnings(v, R2, Q), [v, R2, Q]);
+  const scen = React.useMemo(() => modelScenarios(v), [v]);
+  const pas = React.useMemo(() => MODEL_PA.map(p => Object.assign({ label: p.label, danhgia: p.danhgia },
+    cashflowModel(v, R2, p.tl === null ? v.md_tl_chothue : p.tl, p.mode))), [v, R2]);
+  const gp = React.useMemo(() => modelGiaiPhap(v, R1, R2), [v, R1, R2]);
+  const [open, setOpen] = React.useState(0);
+  const [busy, setBusy] = React.useState("");
+  const allChecks = checks.concat(qw);
+
+  const C = { navy: "#0F2940", gold: "#C8932E", line: "#E4E9F0", muted: "#647084", bg: "#F4F6F9" };
+  const card = (title, children, accent) => h("div", { style: {
+    background: "#fff", border: "1px solid " + C.line, borderRadius: 10, marginBottom: 14, overflow: "hidden" } },
+    h("div", { style: { padding: "10px 14px", background: accent || C.navy, color: "#fff",
+      fontSize: 13, fontWeight: 700 } }, title),
+    h("div", { style: { padding: "10px 14px" } }, children));
+
+  const tbl = (head, rows, opts = {}) => h("div", { style: { overflowX: "auto" } },
+    h("table", { style: { borderCollapse: "collapse", width: "100%", fontSize: 12.5 } },
+      h("thead", null, h("tr", null, head.map((t, i) => h("th", { key: i, style: {
+        textAlign: i === 0 ? "left" : "right", padding: "6px 8px", borderBottom: "2px solid " + C.navy,
+        color: C.navy, fontWeight: 700, background: "#F7F9FC", verticalAlign: "bottom" } }, t)))),
+      h("tbody", null, rows.map((row, ri) => {
+        const st = opts.bold && opts.bold.indexOf(ri) >= 0;
+        return h("tr", { key: ri, style: st ? { background: "#FFF6DF" } : null },
+          row.map((c, ci) => h("td", { key: ci, style: {
+            textAlign: ci === 0 ? "left" : "right", padding: "5px 8px",
+            borderBottom: "1px solid " + C.line, fontWeight: st ? 700 : 400,
+            color: st ? C.navy : "#222", whiteSpace: ci === 0 ? "normal" : "nowrap" } }, c)));
+      }))));
+
+  const kpi = (val, lbl, tone) => h("div", { style: {
+    flex: "1 1 140px", background: "#fff", border: "1px solid " + C.line,
+    borderLeft: "4px solid " + (tone === "bad" ? "#9A2B2B" : tone === "warn" ? C.gold : "#1B5E3F"),
+    borderRadius: 8, padding: "10px 12px" } },
+    h("div", { style: { fontSize: 17, fontWeight: 700, color: C.navy } }, val),
+    h("div", { style: { fontSize: 11.5, color: C.muted, marginTop: 2 } }, lbl));
+
+  const inputs = MODEL_SECTIONS.map((sec, si) => h("div", { key: si, style: { marginBottom: 6 } },
+    h("button", { type: "button", onClick: () => setOpen(open === si ? -1 : si), style: {
+      width: "100%", textAlign: "left", padding: "9px 12px", borderRadius: 8,
+      border: "1px solid " + C.line, background: open === si ? C.navy : "#fff",
+      color: open === si ? "#fff" : C.navy, fontWeight: 700, fontSize: 12.5, cursor: "pointer" } }, sec.title),
+    open === si && h("div", { style: { padding: "8px 4px 4px" } },
+      si === MODEL_SECTIONS.length - 1 ? [h("label", { key: "loai", style: {
+        display: "flex", alignItems: "center", gap: 8, padding: "4px 6px", background: "#FFF6DF",
+        borderRadius: 6, marginBottom: 3 } },
+        h("span", { style: { flex: 1, fontSize: 11.5 } }, "Loại công trình tra bảng"),
+        h("select", { value: v.q425_loai, onChange: e => setField("q425_loai", e.target.value),
+          style: { padding: "4px 6px", fontSize: 12, borderRadius: 5, border: "1px solid " + C.line } },
+          h("option", { value: "danang" }, "Đa năng (Bảng 26)"),
+          h("option", { value: "chungcu" }, "Chung cư (Bảng 1)")))] : null,
+      sec.fields.map(f => h("label", { key: f.k, style: {
+        display: "flex", alignItems: "center", gap: 8, padding: "4px 6px",
+        background: f.key ? "#FFF6DF" : "transparent", borderRadius: 6, marginBottom: 3 } },
+        h("span", { style: { flex: 1, fontSize: 11.5, color: "#333", lineHeight: 1.3 } }, f.l),
+        h("input", { type: "number", step: f.s, value: v[f.k],
+          onChange: e => setField(f.k, e.target.value === "" ? 0 : parseFloat(e.target.value)),
+          style: { width: 92, padding: "4px 6px", border: "1px solid " + C.line, borderRadius: 5,
+            fontSize: 12, textAlign: "right", color: "#1A56A8", fontWeight: 600 } }),
+        h("span", { style: { width: 70, fontSize: 10.5, color: C.muted } }, f.u))))));
+
+  const tmdtRow = (S_, R_) => [
+    ["1. Bồi thường, hỗ trợ, GPMB", R_.c_gpmb], ["2. Tiền sử dụng đất (miễn)", 0],
+    ["3. Rà phá bom mìn, khảo sát", S_.md_rapha], ["4. Hạ tầng kỹ thuật nội khu", S_.md_ht_noikhu],
+    ["5. Hạ tầng kỹ thuật ngoài ranh", S_.md_ht_ngoairanh], ["6. Móng cọc, tường vây", S_.md_mong_coc],
+    ["7. Xây dựng phần ngầm", R_.c_ngam], ["8. Xây dựng khối đế", R_.c_de],
+    ["9. Xây dựng khối tháp", R_.c_thap], ["10. Thiết bị", R_.c_tb],
+    ["11. PCCC chuyên dụng", S_.md_pccc], ["12. Trang thiết bị nhà trẻ, SHCĐ", S_.md_tb_nhatre],
+    ["13. Quản lý dự án", R_.c_qlda], ["14. Tư vấn đầu tư xây dựng", R_.c_tuvan],
+    ["15. Chi phí khác", R_.c_khac], ["16. Chi phí bán hàng", S_.md_cp_banhang],
+    ["17. Vận hành tạm, nghiệm thu", S_.md_cp_vanhanhtam], ["A. Cộng trước dự phòng, lãi vay", R_.A],
+    ["18. Dự phòng phí", R_.c_dp], ["19. Lãi vay trong TGXD", R_.c_laivay],
+    ["B. TỔNG MỨC ĐẦU TƯ", R_.tmdt]];
+  const S1 = toPA1(v);
+  const t1 = tmdtRow(S1, R1), t2 = tmdtRow(v, R2);
+
+  const doX = async () => { setBusy("x");
+    try { await exportModelExcel(v, R2, R1, scen, pas, allChecks); }
+    catch (e) { console.error(e); alert("Không xuất được Excel: " + e.message); } finally { setBusy(""); } };
+  const doW = async () => { setBusy("w");
+    try { await exportModelWord(v, R2, R1, scen, pas, allChecks); }
+    catch (e) { console.error(e); alert("Không xuất được Word: " + e.message); } finally { setBusy(""); } };
+  const btn = (label, on, act) => h("button", { type: "button", onClick: on, disabled: !!busy, style: {
+    padding: "9px 16px", borderRadius: 8, border: "none", cursor: busy ? "wait" : "pointer",
+    background: act ? "#8a8f98" : C.gold, color: "#fff", fontWeight: 700, fontSize: 12.5 } }, label);
+
+  const qbtn = (label, on, dis) => h("button", { type: "button", onClick: on, disabled: !!dis, style: {
+    padding: "6px 11px", borderRadius: 6, fontSize: 11.5, fontWeight: 600,
+    border: "1px solid " + (dis ? C.line : C.gold), cursor: dis ? "default" : "pointer",
+    background: dis ? "#F2F3F5" : "#fff", color: dis ? "#9AA3B0" : "#7A5C12" } }, label);
+
+  const prev = React.useMemo(() => {
+    const mk = (l, patch) => ({ l: l, R: computeModel(Object.assign({}, v, patch)) });
+    const pKdc = { md_kdc_ham: R425.kdc };
+    const pTb = { md_tl_thietbi: R425.tl_tb };
+    const pSv = { md_sv_thap: R425.sv_thap, md_sv_de: R425.sv_de, md_sv_ham: R425.sv_ham };
+    return [
+      mk("Hiện tại", {}),
+      mk("Chỉ áp Kdc phần hầm mở rộng", pKdc),
+      mk("Chỉ nâng thiết bị theo QĐ 425", pTb),
+      mk("Đồng bộ: Kdc + thiết bị", Object.assign({}, pKdc, pTb)),
+      mk("Đồng bộ đầy đủ: Kdc + thiết bị + suất vốn XD", Object.assign({}, pKdc, pTb, pSv))
+    ];
+  }, [v, R425]);
+
+  const badge = c => h("span", { style: {
+    flexShrink: 0, fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 4,
+    height: 16, lineHeight: "12px",
+    background: c.level === "danger" ? "#FBE9E9" : c.level === "warn" ? "#FFF6DF" : "#E7F3EC",
+    color: c.level === "danger" ? "#9A2B2B" : c.level === "warn" ? "#8A6412" : "#1B5E3F" } },
+    c.level === "danger" ? "VI PHẠM" : c.level === "warn" ? "LƯU Ý" : "ĐẠT");
+  const checkList = arr => arr.map((c, i) => h("div", { key: i, style: {
+    display: "flex", gap: 8, padding: "6px 0",
+    borderBottom: i < arr.length - 1 ? "1px solid " + C.line : "none" } },
+    badge(c), h("span", { style: { fontSize: 12, lineHeight: 1.5, color: "#333" } }, c.text)));
+
+  return h("div", { style: { display: "flex", flexDirection: "column", height: "100vh",
+    background: C.bg, fontFamily: "sans-serif" } }, header,
+    h("div", { style: { flex: 1, overflowY: "auto", padding: 16 } },
+      h("div", { style: { display: "flex", flexWrap: "wrap", gap: 16, alignItems: "flex-start" } },
+        h("div", { style: { flex: "1 1 340px", maxWidth: 470 } },
+          h("div", { style: { fontSize: 15, fontWeight: 700, color: C.navy, marginBottom: 4 } },
+            "Bảng giả thiết đầu vào"),
+          h("div", { style: { fontSize: 11.5, color: C.muted, marginBottom: 10, lineHeight: 1.45 } },
+            "Ô nền vàng là giả thiết then chốt. Suất vốn nhập vào phải là suất CHI PHÍ XÂY DỰNG chưa gồm thuế GTGT, vì mô hình cộng riêng thiết bị, quản lý dự án và tư vấn."),
+          inputs,
+          h("div", { style: { display: "flex", gap: 10, marginTop: 16, flexWrap: "wrap" } },
+            btn(busy === "x" ? "Đang xuất…" : "⬇ Xuất mô hình Excel", doX, busy === "x"),
+            btn(busy === "w" ? "Đang xuất…" : "⬇ Xuất Báo cáo Word", doW, busy === "w"))),
+
+        h("div", { style: { flex: "2 1 560px", minWidth: 320 } },
+          h("div", { style: { display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 14 } },
+            kpi(nfM(R2.tmdt, 0) + " tỷ", "TMĐT — PA2 kiến nghị"),
+            kpi(nfM(R2.gia_ban, 1) + " tr/m²", "Giá bán NOXH (thông thủy)"),
+            kpi(nfM(R2.so_can, 0) + " căn", "Số căn hộ"),
+            kpi(pcM(R2.tl_ln_noxh), "LN định mức thực tế", R2.tl_ln_noxh > v.md_ln_dinhmuc ? "bad" : "ok"),
+            kpi(isFinite(pas[0].irr) ? pcM(pas[0].irr * 100) : "—", "IRR giữ cho thuê",
+              pas[0].irr < 0 ? "bad" : pas[0].irr < 0.08 ? "warn" : "ok"),
+            kpi(nfM(R2.suat_dt, 2) + " tr/m²", "Suất đầu tư / m² sàn XD")),
+
+          card("Đối chiếu Quyết định 425/QĐ-BXD ngày 30/3/2026", h("div", null,
+            h("p", { style: { fontSize: 11.5, color: C.muted, margin: "0 0 8px", lineHeight: 1.5 } },
+              "Chỉ tiêu " + Q.q.ma + " — " + (v.q425_loai === "chungcu" ? "nhà chung cư (Bảng 1)" : "công trình đa năng (Bảng 26)")
+              + ", " + Q.q.nhom + ", " + Q.q.ham + ". Mặt bằng giá Quý IV/2025, đã gồm thuế GTGT 10%. Hệ số quy đổi K = Ktg × Kkv = "
+              + nfM(Q.K, 3) + "."),
+            tbl(["Chỉ tiêu (tr đ/m² sàn xây dựng)", "QĐ 425 (đã quy đổi)", "Phương án (quy về có VAT)", "Chênh lệch"], [
+              ["Suất vốn đầu tư", nfM(Q.svdt_cb, 3), nfM(Q.svdt_pa_vat, 3), sgM(Q.d_svdt, 1) + "%"],
+              ["   Trong đó: chi phí xây dựng", nfM(Q.cpxd_cb, 3), nfM(Q.cpxd_pa_vat, 3), sgM(Q.d_cpxd, 1) + "%"],
+              ["   Trong đó: chi phí thiết bị", nfM(Q.cptb_cb, 3), nfM(Q.cptb_pa_vat, 3), sgM(Q.d_cptb, 1) + "%"],
+              ["Diện tích xây dựng hầm / nổi", nfM(Q.nxd_noi, 0) + " m² nổi", nfM(Q.nxd_ham, 0) + " m² hầm",
+                nfM(Q.tyle_ham, 2) + " lần"]
+            ], { bold: [0] }),
+            h("div", { style: { marginTop: 12, padding: "10px 12px", background: "#FFFBF0",
+              border: "1px dashed " + C.gold, borderRadius: 8 } },
+              h("div", { style: { fontSize: 12, fontWeight: 700, color: "#7A5C12", marginBottom: 6 } },
+                "Hiệu chỉnh về mức QĐ 425"),
+              h("div", { style: { fontSize: 11.3, color: C.muted, lineHeight: 1.5, marginBottom: 8 } },
+                "Mỗi nút áp một hiệu chỉnh và mô hình tính lại ngay, nên có thể bấm lần lượt. Thứ tự khuyến nghị: Kdc → thiết bị → suất vốn xây dựng."),
+              h("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } },
+                qbtn("Áp Kdc = " + nfM(R425.kdc, 1) + "% cho phần hầm mở rộng",
+                  () => setField("md_kdc_ham", +R425.kdc.toFixed(2)), R425.tyle_ham <= 1),
+                qbtn("Nâng thiết bị lên " + nfM(R425.tl_tb, 2) + "% chi phí xây dựng",
+                  () => setField("md_tl_thietbi", +R425.tl_tb.toFixed(2))),
+                qbtn("Khôi phục giả thiết theo báo cáo 7/2026",
+                  () => { setField("md_tl_thietbi", 7); setField("md_kdc_ham", 100); }),
+                qbtn("Hiệu chỉnh suất vốn xây dựng × " + nfM(R425.k, 4),
+                  () => { setField("md_sv_thap", +R425.sv_thap.toFixed(3));
+                    setField("md_sv_de", +R425.sv_de.toFixed(3));
+                    setField("md_sv_ham", +R425.sv_ham.toFixed(3)); })),
+              h("div", { style: { marginTop: 10 } },
+                tbl(["Nếu áp dụng", "TMĐT (tỷ)", "Giá bán tối đa (tr/m²)", "Chênh giá"],
+                  prev.map(p => [p.l, nfM(p.R.tmdt, 1), nfM(p.R.gia_max, 2),
+                    sgM(p.R.gia_max - R2.gia_max, 2)]), { bold: [0] }))),
+            h("div", { style: { marginTop: 10 } }, checkList(qw))), "#7A5C12"),
+
+          card("Rà soát ràng buộc pháp lý và kỹ thuật", checkList(checks)),
+
+          card("I · Quy mô dự án", tbl(["Chỉ tiêu", "Giá trị", "Đơn vị"], [
+            ["Diện tích sàn khối đế", nfM(R2.san_de, 0), "m²"],
+            ["Diện tích sàn khối tháp", nfM(R2.san_thap, 0), "m²"],
+            ["Tổng diện tích sàn nổi (GFA)", nfM(R2.gfa, 0), "m²"],
+            ["Diện tích sàn tầng hầm", nfM(R2.san_ham, 0), "m²"],
+            ["Tổng diện tích sàn xây dựng", nfM(R2.san_xd, 0), "m²"],
+            ["Hệ số sử dụng đất (FAR)", nfM(R2.far, 2), "lần"],
+            ["Diện tích thông thủy căn hộ", nfM(R2.tt_canho, 0), "m²"],
+            ["Số căn hộ (bán / cho thuê)", nfM(R2.so_can, 0) + " (" + nfM(R2.so_can_ban, 0) + " / " + nfM(R2.so_can_thue, 0) + ")", "căn"],
+            ["Quy mô dân số", nfM(R2.dan_so, 0), "người"],
+            ["Diện tích sàn TM-DV", nfM(R2.san_tm, 0) + " (" + pcM(R2.tl_tm_gfa * 100) + " GFA)", "m²"],
+            ["Chỗ đỗ ô tô (căn hộ / TM-DV)", nfM(R2.oto_o, 0) + " / " + nfM(R2.oto_tm, 0), "chỗ"],
+            ["Chỉ tiêu tương ứng", nfM(R2.cho_tren_can, 2), "chỗ/căn"],
+            ["Nhu cầu diện tích tầng hầm", nfM(R2.nhu_cau_ham, 0), "m²"],
+            ["Cân đối tầng hầm", sgM(R2.can_doi_ham, 0), "m²"]
+          ], { bold: [4] })),
+
+          card("II · Cơ cấu căn hộ", tbl(["Loại căn hộ", "DT thông thủy (m²)", "Số căn", "Tổng DT (m²)", "Nhân khẩu"],
+            R2.cocau.map(c => [c.ten, nfM(c.dt, 1), nfM(c.n, 0), nfM(c.tong, 0), nfM(c.nk, 0)])
+              .concat([["Cộng", nfM(R2.dtbq, 1), nfM(R2.so_can, 0),
+                nfM(R2.cocau.reduce((a, c) => a + c.tong, 0), 0), nfM(R2.dan_so, 0)]]),
+            { bold: [3] })),
+
+          card("III · Tổng mức đầu tư — PA1 và PA2 (tỷ đồng)",
+            tbl(["Khoản mục", "PA1", "PA2 (kiến nghị)", "Chênh"],
+              t2.map((x, i) => [x[0], nfM(t1[i][1], 2), nfM(x[1], 2), sgM(x[1] - t1[i][1], 2)]),
+              { bold: [17, 20] })),
+
+          card("IV · Sáu giải pháp tối ưu chi phí",
+            tbl(["Giải pháp", "Tác động (tỷ)", "Điều kiện áp dụng"],
+              gp.map(x => [x.gp, (x.thuhoi ? "Thu hồi " : "Giảm ") + nfM(x.giam, 2), x.dk]))),
+
+          card("V · Phân bổ chi phí và xác định giá bán NOXH", h("div", null,
+            tbl(["Khoản mục", "Tổng", "Phần NOXH", "Phần TM-DV"], [
+              ["Xây dựng khối tháp", nfM(R2.c_thap, 2), nfM(R2.c_thap, 2), nfM(0, 2)],
+              ["Xây dựng khối đế", nfM(R2.c_de, 2), nfM(R2.de_noxh, 2), nfM(R2.de_tm, 2)],
+              ["Xây dựng phần ngầm", nfM(R2.c_ngam, 2), nfM(R2.ham_noxh, 2), nfM(R2.ham_tm, 2)],
+              ["Cộng chi phí trực tiếp", nfM(R2.cp_tt, 2), nfM(R2.cp_tt_noxh, 2), nfM(R2.de_tm + R2.ham_tm, 2)],
+              ["Tỷ trọng phân bổ gián tiếp", "100%", pcM(R2.w_noxh * 100), pcM((1 - R2.w_noxh) * 100)],
+              ["Chi phí gián tiếp", nfM(R2.cp_gt, 2), nfM(R2.gt_noxh, 2), nfM(R2.gt_tm, 2)],
+              ["TỔNG CHI PHÍ ĐẦU TƯ", nfM(R2.tmdt, 2), nfM(R2.cp_noxh, 2), nfM(R2.cp_tm, 2)]
+            ], { bold: [3, 6] }),
+            h("div", { style: { height: 10 } }),
+            tbl(["Xác định giá bán", "PA1", "PA2 (kiến nghị)"], [
+              ["Chi phí đầu tư phần NOXH (tỷ)", nfM(R1.cp_noxh, 2), nfM(R2.cp_noxh, 2)],
+              ["Diện tích thông thủy NOXH (m²)", nfM(R1.tt_canho, 0), nfM(R2.tt_canho, 0)],
+              ["Giá thành (tr/m² TT)", nfM(R1.gia_thanh, 2), nfM(R2.gia_thanh, 2)],
+              ["Lợi nhuận định mức " + v.md_ln_dinhmuc + "%", nfM(R1.ln_dm_dv, 2), nfM(R2.ln_dm_dv, 2)],
+              ["GIÁ BÁN TỐI ĐA (tr/m²)", nfM(R1.gia_max, 2), nfM(R2.gia_max, 2)],
+              ["Giá bán áp dụng (làm tròn)", "—", nfM(R2.gia_ban, 1)]
+            ], { bold: [4, 5] }))),
+
+          card("VI · Doanh thu và hiệu quả tài chính", tbl(["Chỉ tiêu", "Giá trị", "Đơn vị"], [
+            ["Doanh thu bán NOXH", nfM(R2.dt_noxh, 2), "tỷ"],
+            ["Giá trị tài sản NOXH cho thuê", nfM(R2.gt_thue, 2), "tỷ"],
+            ["Doanh thu kinh doanh TM-DV", nfM(R2.dt_tm, 2), "tỷ"],
+            ["TỔNG DOANH THU / GIÁ TRỊ", nfM(R2.dt_tong, 2), "tỷ"],
+            ["Lợi nhuận trước thuế", nfM(R2.lntt, 2), "tỷ"],
+            ["   Lợi nhuận phần NOXH (bị khống chế)", nfM(R2.ln_noxh, 2) + " (" + pcM(R2.tl_ln_noxh) + ")", "tỷ"],
+            ["   Lợi nhuận phần TM-DV (không khống chế)", nfM(R2.ln_tm, 2) + " (" + pcM(R2.tt_ln_tm) + " tổng LN)", "tỷ"],
+            ["Thuế thu nhập doanh nghiệp", nfM(R2.thue_tndn, 2), "tỷ"],
+            ["Lợi nhuận sau thuế", nfM(R2.lnst, 2), "tỷ"],
+            ["Tỷ suất lợi nhuận trước thuế / TMĐT", pcM(R2.ts_ln_tmdt), ""],
+            ["Vốn chủ sở hữu tối thiểu", nfM(R2.vcsh, 2), "tỷ"],
+            ["Vốn vay dự kiến", nfM(R2.von_vay, 2), "tỷ"]
+          ], { bold: [3, 4, 8] })),
+
+          card("VII · Dòng tiền và IRR", h("div", null,
+            tbl(["Khoản mục (tỷ đồng)", "Năm 1", "Năm 2", "Năm 3", "Năm 4"], [
+              ["Chi đầu tư"].concat(pas[0].chi.map(x => nfM(x, 2))),
+              ["Thu tiền bán NOXH"].concat(pas[0].thuN.map(x => nfM(x, 2))),
+              ["Thu tiền TM-DV"].concat(pas[0].thuT.map(x => nfM(x, 2))),
+              ["Dòng tiền ròng"].concat(pas[0].tien.map(x => nfM(x, 2))),
+              ["Lũy kế"].concat(pas[0].luyke.map(x => nfM(x, 2)))
+            ], { bold: [3, 4] }),
+            h("div", { style: { height: 10 } }),
+            tbl(["Kịch bản xử lý phần cho thuê", "IRR dự án", "Đánh giá"],
+              pas.map(p => [p.label, isFinite(p.irr) ? pcM(p.irr * 100) : "—", p.danhgia]), { bold: [0] }))),
+
+          card("VIII · Phân tích độ nhạy", tbl(
+            ["Kịch bản", "Giá bán NOXH (tr/m²)", "TMĐT (tỷ)", "Chênh giá"],
+            scen.map(s => [s.label, nfM(s.R.gia_max, 2), nfM(s.R.tmdt, 1), sgM(s.chenh, 2)]), { bold: [0] })),
+
+          h("p", { style: { fontSize: 11, color: C.muted, lineHeight: 1.6, margin: "4px 0 30px" } },
+            "Số liệu sơ bộ giai đoạn đề xuất chủ trương đầu tư, lập trên cơ sở suất vốn đầu tư ước tính. Phải cập nhật sau khi có kết quả khảo sát địa chất, thiết kế cơ sở và dự toán chi tiết.")))));
+}
+
+// ---------------------------------------------------------------------------
+// XUẤT WORD — theo mẫu "BÁO CÁO TÓM TẮT ĐẦU TƯ" (13 mục + 2 phụ lục)
+// ---------------------------------------------------------------------------
+async function exportModelWord(S, R2, R1, scen, pas, checks) {
+  const docx = await loadDocxLib();
+  const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
+    WidthType, AlignmentType, HeadingLevel, BorderStyle, ShadingType,
+    VerticalAlign, PageBreak } = docx;
+  const NAVY = "0F2940", LIGHT = "EEF2F7", HEAD = "1F3A56";
+  const RG = AlignmentType.RIGHT, CT = AlignmentType.CENTER;
+
+  const P = (t, o = {}) => new Paragraph({
+    spacing: { after: o.after === undefined ? 130 : o.after },
+    alignment: o.align || AlignmentType.JUSTIFIED,
+    children: [new TextRun({ text: t, bold: !!o.bold, italics: !!o.italic, size: o.size || 24, color: o.color })]
+  });
+  const H1 = t => new Paragraph({
+    heading: HeadingLevel.HEADING_1, spacing: { before: 340, after: 170 },
+    children: [new TextRun({ text: t, bold: true, size: 28, color: NAVY })]
+  });
+  const H2 = t => new Paragraph({
+    heading: HeadingLevel.HEADING_2, spacing: { before: 220, after: 120 },
+    children: [new TextRun({ text: t, bold: true, size: 25, color: NAVY })]
+  });
+  const CAP = t => new Paragraph({
+    alignment: CT, spacing: { before: 100, after: 90 },
+    children: [new TextRun({ text: t, bold: true, italics: true, size: 23, color: NAVY })]
+  });
+  const bl = (t, o = {}) => new Paragraph({
+    bullet: { level: 0 }, spacing: { after: 80 },
+    children: [new TextRun({ text: t, bold: !!o.bold, italics: !!o.italic, size: 24 })]
+  });
+  const NOTE = t => new Paragraph({
+    spacing: { before: 100, after: 150 }, alignment: AlignmentType.JUSTIFIED,
+    children: [new TextRun({ text: t, italics: true, size: 22, color: "6B4E1A" })]
+  });
+  const bd = { style: BorderStyle.SINGLE, size: 4, color: "9FB0C2" };
+  const cel = (t, o = {}) => new TableCell({
+    width: { size: o.width || 2000, type: WidthType.DXA },
+    shading: o.header ? { type: ShadingType.CLEAR, fill: HEAD }
+      : o.total ? { type: ShadingType.CLEAR, fill: LIGHT } : undefined,
+    verticalAlign: VerticalAlign.CENTER,
+    borders: { top: bd, bottom: bd, left: bd, right: bd },
+    margins: { top: 40, bottom: 40, left: 80, right: 80 },
+    children: String(t).split("\n").map((ln, i, ar) => new Paragraph({
+      alignment: o.align || AlignmentType.LEFT,
+      spacing: { after: i === ar.length - 1 ? 0 : 40 },
+      children: [new TextRun({
+        text: ln, bold: !!o.header || !!o.total || !!o.bold,
+        color: o.header ? "FFFFFF" : (o.color || "222222"), size: o.size || 21
+      })]
+    }))
+  });
+  const T = (widths, rows) => new Table({
+    width: { size: widths.reduce((a, b) => a + b, 0), type: WidthType.DXA },
+    columnWidths: widths,
+    rows: rows.map(cs => new TableRow({
+      children: cs.map((c, i) => cel(c.t, Object.assign({}, c, { width: widths[i] })))
+    }))
+  });
+  const hdr = arr => arr.map(t => ({ t: t, header: true, align: CT }));
+  const n0 = x => nfM(x, 0), n1 = x => nfM(x, 1), n2 = x => nfM(x, 2);
+
+  const gp = modelGiaiPhap(S, R1, R2);
+  const tienDo = modelTienDo(S);
+  const now = new Date();
+  const thang = now.getMonth() + 1, nam = now.getFullYear();
+
+  // ======================= TRANG BÌA =======================
+  const bia = [
+    P(S.md_chudautu.toUpperCase(), { align: CT, bold: true, size: 26, after: 60 }),
+    P("____________________", { align: CT, after: 700 }),
+    P("BÁO CÁO TÓM TẮT ĐẦU TƯ", { align: CT, bold: true, size: 40, color: NAVY, after: 200 }),
+    P("DỰ ÁN " + S.md_ten_da.toUpperCase(), { align: CT, bold: true, size: 34, color: NAVY, after: 200 }),
+    P(S.md_diadiem, { align: CT, italic: true, size: 26, after: 900 }),
+    P("Hà Nội, tháng " + thang + " năm " + nam, { align: CT, italic: true, size: 24, after: 0 }),
+    new Paragraph({ children: [new PageBreak()] })
+  ];
+
+  // ======================= GHI CHÚ PHẠM VI =======================
+  const ghichu = [H1("GHI CHÚ VỀ PHẠM VI HIỆU CHỈNH"),
+  P("Báo cáo này được lập trên cơ sở mô hình tài chính tính lại toàn bộ, với ba thay đổi cốt lõi so với bản báo cáo trước:"),
+  bl("Tính đủ chi phí xây dựng phần ngầm và móng cọc, tường vây — các khoản bị bỏ sót ở bản cũ."),
+  bl("Xác định giá bán nhà ở xã hội theo phương pháp chi phí cộng lợi nhuận định mức, thay cho giả định theo giá thị trường."),
+  bl("Hạch toán tách riêng phần nhà ở xã hội và phần kinh doanh dịch vụ - thương mại, phù hợp với ràng buộc trần lợi nhuận tại khoản 2 Điều 85 Luật Nhà ở 2023."),
+  NOTE("Số liệu trong báo cáo là số liệu sơ bộ giai đoạn đề xuất chủ trương đầu tư, lập trên cơ sở suất vốn đầu tư ước tính. Phải cập nhật sau khi có kết quả khảo sát địa chất, thiết kế cơ sở và dự toán chi tiết."),
+  new Paragraph({ children: [new PageBreak()] })];
+
+  // ======================= I =======================
+  const secI = [H1("I. THÔNG TIN CHUNG DỰ ÁN"), CAP("Bảng 1.1 - Thông tin tổng quan dự án"),
+  T([600, 3200, 3400], [hdr(["TT", "Nội dung", "Thông tin"]),
+  ...[
+    ["Tên dự án", S.md_ten_da],
+    ["Chủ đầu tư đề xuất", S.md_chudautu + " (cần bổ sung tên pháp nhân đầy đủ, tỷ lệ góp vốn, thỏa thuận liên danh)"],
+    ["Địa điểm", S.md_diadiem],
+    ["Diện tích khu đất", n0(S.md_dt_dat) + " m²"],
+    ["Loại hình dự án", "Nhà ở xã hội (bán và cho thuê), có phần kinh doanh dịch vụ - thương mại tại khối đế"],
+    ["Quy mô xây dựng", S.md_so_thap + " tháp, " + R2.tong_tang + " tầng nổi (" + S.md_tang_de
+      + " tầng đế + " + S.md_tang_thap + " tầng tháp) + " + S.md_tang_ham + " tầng hầm"],
+    ["Tổng diện tích sàn nổi (GFA)", n0(R2.gfa) + " m²"],
+    ["Tổng diện tích sàn hầm", n0(R2.san_ham) + " m²"],
+    ["Hệ số sử dụng đất (FAR)", n2(R2.far) + " lần"],
+    ["Quy mô căn hộ NOXH", n0(R2.so_can) + " căn (bình quân " + n1(R2.dtbq) + " m² thông thủy)"],
+    ["Cơ cấu bán - cho thuê", (100 - S.md_tl_chothue) + "% diện tích sàn để bán (" + n0(R2.so_can_ban)
+      + " căn); " + S.md_tl_chothue + "% cho thuê (" + n0(R2.so_can_thue) + " căn)"],
+    ["Diện tích sàn TM-DV", n0(R2.san_tm) + " m² (chiếm " + n1(R2.tl_tm_gfa * 100) + "% GFA, dưới trần 20%)"],
+    ["Quy mô dân số", n0(R2.dan_so) + " người"]
+  ].map((x, i) => [{ t: i + 1, align: CT }, { t: x[0] }, { t: x[1] }]),
+  [{ t: 14, align: CT, total: true }, { t: "Tổng mức đầu tư (PA kiến nghị)", total: true },
+  { t: n2(R2.tmdt) + " tỷ đồng", total: true }],
+  [{ t: 15, align: CT, total: true }, { t: "Giá bán NOXH (theo phương pháp chi phí)", total: true },
+  { t: n1(R2.gia_ban) + " triệu đ/m² thông thủy (chưa gồm thuế GTGT và kinh phí bảo trì 2%)", total: true }],
+  [{ t: 16, align: CT, total: true }, { t: "Lợi nhuận trước thuế", total: true },
+  { t: n2(R2.lntt) + " tỷ đồng, tương đương " + n1(R2.ts_ln_tmdt) + "% tổng mức đầu tư", total: true }],
+  [{ t: 17, align: CT }, { t: "Thời gian thực hiện" }, { t: S.md_thoigian + " tháng" }]])];
+
+  // ======================= II =======================
+  const secII = [H1("II. CĂN CỨ PHÁP LÝ VÀ TRÌNH TỰ THỦ TỤC"),
+  H2("2.1. Căn cứ pháp lý"), CAP("Bảng 2.1 - Hệ thống văn bản pháp lý áp dụng"),
+  T([600, 2700, 3900], [hdr(["TT", "Văn bản", "Nội dung liên quan"]),
+  ...MODEL_PHAPLY.map((x, i) => [{ t: i + 1, align: CT }, { t: x[0] }, { t: x[1] }])]),
+
+  H2("2.2. Xác định trình tự thủ tục cần áp dụng"),
+  P("Đây là nội dung phải được làm rõ trước khi hoàn thiện hồ sơ, vì nó quyết định cấu trúc và tên gọi của toàn bộ tài liệu:"),
+  bl("Trường hợp dự án thuộc phạm vi áp dụng Nghị quyết 201/2025/QH15: dự án KHÔNG phải thực hiện thủ tục chấp thuận chủ trương đầu tư và không phải thẩm định báo cáo nghiên cứu khả thi; hồ sơ cần lập là hồ sơ đề nghị giao chủ đầu tư (không qua đấu thầu). Khi đó tài liệu này được sử dụng làm thuyết minh năng lực và phương án đầu tư kèm theo."),
+  bl("Trường hợp không thuộc phạm vi trên: thực hiện thủ tục chấp thuận chủ trương đầu tư đồng thời chấp thuận nhà đầu tư theo Luật Đầu tư 2020, kèm đầy đủ các nội dung tại Điều 33 của Luật."),
+  NOTE("Kiến nghị: Chủ đầu tư có văn bản đề nghị Sở Xây dựng hướng dẫn xác định trình tự thủ tục áp dụng trước khi nộp hồ sơ chính thức. Việc nộp sai loại hồ sơ là nguyên nhân phổ biến nhất làm kéo dài thời gian phê duyệt."),
+
+  H2("2.3. Các ưu đãi được hưởng và nghĩa vụ kèm theo"),
+  CAP("Bảng 2.2 - Ưu đãi, nghĩa vụ và giá trị định lượng"),
+  T([2100, 3100, 2000], [hdr(["Nội dung", "Quy định", "Giá trị định lượng với dự án"]),
+  [{ t: "Miễn tiền sử dụng đất, tiền thuê đất" },
+  { t: "Toàn bộ diện tích đất dự án, kể cả phần đất tương ứng với diện tích sàn kinh doanh dịch vụ - thương mại; không phải thực hiện thủ tục xác định giá đất" },
+  { t: "Tiền sử dụng đất phải nộp: 0 đồng" }],
+  [{ t: "Hoàn trả / khấu trừ chi phí GPMB" },
+  { t: "Chi phí bồi thường, hỗ trợ, tái định cư do Chủ đầu tư ứng trước được hoàn trả hoặc khấu trừ" },
+  { t: "Cần bảo lưu quyền đối với " + n2(R2.c_gpmb) + " tỷ đồng" }],
+  [{ t: "Diện tích kinh doanh TM-DV" }, { t: "Tối đa 20% tổng diện tích sàn của dự án" },
+  { t: "Bố trí " + n0(R2.san_tm) + " m² = " + n1(R2.tl_tm_gfa * 100) + "% - đạt" }],
+  [{ t: "Tăng chỉ tiêu quy hoạch" },
+  { t: "Được điều chỉnh tăng hệ số sử dụng đất hoặc mật độ xây dựng tối đa 1,5 lần" },
+  { t: "Căn cứ chính để bảo vệ FAR " + n2(R2.far) + " và mật độ xây dựng " + n0(S.md_md_de) + "%" }],
+  [{ t: "Ưu đãi thuế" }, { t: "Thuế suất thuế TNDN ưu đãi đối với phần NOXH; thuế GTGT ưu đãi" },
+  { t: "Phần NOXH " + S.md_thue_noxh + "%; phần TM-DV chịu thuế suất phổ thông " + S.md_thue_tm + "%" }],
+  [{ t: "Trần lợi nhuận (nghĩa vụ)", total: true },
+  { t: "Tối đa " + S.md_ln_dinhmuc + "% tổng chi phí đầu tư xây dựng phần diện tích NOXH", total: true },
+  { t: "Chi phối toàn bộ phương án tài chính - xem Mục VII", total: true }],
+  [{ t: "Hạch toán riêng (nghĩa vụ)" },
+  { t: "Chi phí và lợi nhuận phần TM-DV hạch toán riêng, không tính vào giá thành NOXH" },
+  { t: "Đã thực hiện tại Mục VII" }],
+  [{ t: "Rủi ro quyết toán (nghĩa vụ)", total: true },
+  { t: "Nếu giá theo kiểm toán, quyết toán thấp hơn giá đã ký hợp đồng thì phải hoàn trả chênh lệch cho người mua; nếu cao hơn thì không được thu thêm", total: true },
+  { t: "Rủi ro một chiều - phải dự phòng trong phương án giá", total: true }]])];
+
+  // ======================= III =======================
+  const secIII = [H1("III. VỊ TRÍ, HIỆN TRẠNG KHU ĐẤT"),
+  H2("3.1. Vị trí và điều kiện tiếp cận"),
+  bl("Khu đất thuộc " + S.md_diadiem + ", nằm trong ranh giới Quy hoạch phân khu đô thị đã được phê duyệt."),
+  bl("Khu đất có mặt tiếp giáp đường, thuận lợi cho tổ chức giao thông tiếp cận và bố trí lối vào - ra tầng hầm tách biệt."),
+  bl("Nằm trong khu vực được quy hoạch đồng bộ, có hệ thống hạ tầng xã hội khu vực (trường học công lập, công viên) trong bán kính phục vụ."),
+  H2("3.2. Hiện trạng và các nội dung cần khảo sát"), CAP("Bảng 3.1 - Hiện trạng khu đất"),
+  T([2100, 2400, 2700], [hdr(["Hạng mục", "Thông tin", "Ghi chú / việc cần làm"]),
+  [{ t: "Diện tích đất" }, { t: n0(S.md_dt_dat) + " m²" },
+  { t: "Cần trích lục bản đồ địa chính và xác nhận ranh giới" }],
+  [{ t: "Hiện trạng sử dụng" }, { t: "Cần xác định theo hồ sơ địa chính" },
+  { t: "Cần xác nhận nguồn gốc đất - quyết định hình thức lựa chọn nhà đầu tư" }],
+  [{ t: "Đơn giá GPMB áp dụng" }, { t: n0(S.md_dg_gpmb * 1e6) + " đ/m²" },
+  { t: "Cần đối chiếu chính thức với Bảng giá đất hiện hành" }],
+  [{ t: "Chi phí GPMB" }, { t: n2(R2.c_gpmb) + " tỷ đồng" },
+  { t: "Được hoàn trả hoặc khấu trừ theo quy định" }],
+  [{ t: "Điều kiện địa chất", total: true }, { t: "Chưa có số liệu khảo sát", total: true },
+  { t: "BẮT BUỘC khảo sát trước khi chốt phương án móng và số tầng hầm", total: true }]])];
+
+  // ======================= IV =======================
+  const cocauRows = R2.cocau.map(c => [{ t: c.ten }, { t: n1(c.dt), align: RG },
+  { t: n0(c.n), align: RG }, { t: n0(c.tong), align: RG }, { t: n0(c.nk), align: RG }]);
+  const secIV = [H1("IV. PHƯƠNG ÁN QUY HOẠCH - KIẾN TRÚC"),
+  H2("4.1. Chỉ tiêu quy hoạch và cơ cấu diện tích sàn"), CAP("Bảng 4.1 - Bóc tách diện tích sàn"),
+  T([2700, 1700, 1200, 1600], [hdr(["Hạng mục", "Mật độ / hệ số", "Số tầng", "Diện tích sàn (m²)"]),
+  [{ t: "Khối đế (hỗn hợp)" }, { t: n0(S.md_md_de) + "%", align: CT }, { t: S.md_tang_de, align: CT }, { t: n0(R2.san_de), align: RG }],
+  [{ t: "Khối tháp (" + S.md_so_thap + " tháp, căn hộ NOXH)" }, { t: n0(S.md_md_thap) + "%", align: CT },
+  { t: S.md_tang_thap, align: CT }, { t: n0(R2.san_thap), align: RG }],
+  [{ t: "Tổng diện tích sàn nổi (GFA)", total: true }, { t: "-", align: CT, total: true },
+  { t: R2.tong_tang, align: CT, total: true }, { t: n0(R2.gfa), align: RG, total: true }],
+  [{ t: "Tầng hầm (phương án kiến nghị)" }, { t: n0(S.md_md_ham) + "%", align: CT },
+  { t: S.md_tang_ham, align: CT }, { t: n0(R2.san_ham), align: RG }],
+  [{ t: "Tổng diện tích sàn xây dựng", total: true }, { t: "-", align: CT, total: true },
+  { t: "-", align: CT, total: true }, { t: n0(R2.san_xd), align: RG, total: true }],
+  [{ t: "Hệ số sử dụng đất (FAR) - phần nổi", total: true }, { t: "-", align: CT, total: true },
+  { t: "-", align: CT, total: true }, { t: n2(R2.far) + " lần", align: RG, total: true }]]),
+
+  CAP("Bảng 4.2 - Cơ cấu sử dụng khối đế"),
+  T([3900, 1700, 1600], [hdr(["Chức năng", "Diện tích sàn (m²)", "Tỷ lệ khối đế"]),
+  [{ t: "Kinh doanh dịch vụ - thương mại" }, { t: n0(R2.san_tm), align: RG },
+  { t: n1(R2.san_tm / R2.san_de * 100) + "%", align: RG }],
+  [{ t: "Nhà trẻ (bố trí trong dự án, sân chơi trên mái đế)" }, { t: n0(S.md_san_nhatre), align: RG },
+  { t: n1(S.md_san_nhatre / R2.san_de * 100) + "%", align: RG }],
+  [{ t: "Sảnh tháp, nhà sinh hoạt cộng đồng, phòng quản lý vận hành, phòng kỹ thuật, khu thu gom rác" },
+  { t: n0(S.md_san_tienich), align: RG }, { t: n1(S.md_san_tienich / R2.san_de * 100) + "%", align: RG }],
+  [{ t: "Cộng", total: true }, { t: n0(R2.san_de), align: RG, total: true }, { t: "100%", align: RG, total: true }]]),
+
+  H2("4.2. Cơ cấu căn hộ và quy mô dân số"),
+  P("Diện tích thông thủy khối tháp = " + n0(R2.san_thap) + " m² × hệ số " + nfM(S.md_hs_tt / 100, 2)
+    + " = " + n0(R2.tt_canho) + " m²."),
+  CAP("Bảng 4.3 - Cơ cấu căn hộ nhà ở xã hội"),
+  T([2200, 1600, 1200, 1500, 1300], [hdr(["Loại căn hộ", "DT thông thủy (m²)", "Số căn", "Tổng DT (m²)", "Số nhân khẩu"]),
+  ...cocauRows,
+  [{ t: "Cộng", total: true }, { t: n1(R2.dtbq), align: RG, total: true }, { t: n0(R2.so_can), align: RG, total: true },
+  { t: n0(R2.cocau.reduce((a, c) => a + c.tong, 0)), align: RG, total: true }, { t: n0(R2.dan_so), align: RG, total: true }]]),
+  bl("Diện tích bình quân " + n1(R2.dtbq) + " m² thông thủy, mọi loại căn đều nằm trong giới hạn 25 - 70 m² theo quy định về tiêu chuẩn diện tích căn hộ NOXH."),
+  bl("Phân chia bán - cho thuê: bán " + n0(R2.so_can_ban) + " căn (" + n0(R2.m2_ban) + " m²); cho thuê "
+    + n0(R2.so_can_thue) + " căn (" + n0(R2.m2_thue) + " m²), đạt tỷ lệ " + S.md_tl_chothue + "% theo định hướng của Thành phố."),
+
+  H2("4.3. Kiểm tra chỉ tiêu đỗ xe và quy mô tầng hầm"),
+  P("Quy mô tầng hầm phải được xác định TỪ nhu cầu đỗ xe, không phải từ một mật độ xây dựng ngầm định trước."),
+  CAP("Bảng 4.4 - Cân đối diện tích tầng hầm"),
+  T([2600, 1900, 2000, 900], [hdr(["Hạng mục",
+    "PA1: " + S.md1_tang_ham + " tầng hầm (mật độ " + n0(S.md1_md_ham) + "%)",
+    "PA2 - kiến nghị: " + S.md_tang_ham + " tầng hầm (mật độ " + n0(S.md_md_ham) + "%)", "Đơn vị"]),
+  ...[
+    ["Diện tích hầm bố trí", n0(R1.san_ham), n0(R2.san_ham), "m²"],
+    ["Chỗ đỗ ô tô cho căn hộ", n0(R1.oto_o) + " chỗ", n0(R2.oto_o) + " chỗ", "chỗ"],
+    ["Chỉ tiêu tương ứng", n2(R1.cho_tren_can) + " chỗ/căn", n2(R2.cho_tren_can) + " chỗ/căn", "-"],
+    ["Chỗ đỗ ô tô cho TM-DV", n0(R1.oto_tm) + " chỗ", n0(R2.oto_tm) + " chỗ", "chỗ"],
+    ["Diện tích đỗ ô tô (" + n0(S.md_dt_1oto) + " m²/chỗ)", n0(R1.dt_oto), n0(R2.dt_oto), "m²"],
+    ["Xe máy (" + n0(R2.xe_may) + " xe × " + n1(S.md_dt_1xemay) + " m²)", n0(R1.dt_xemay), n0(R2.dt_xemay), "m²"],
+    ["Phòng kỹ thuật, bể nước, bơm PCCC, trạm biến áp", n0(S.md_ky_thuat_ham), n0(S.md_ky_thuat_ham), "m²"],
+    ["Ram dốc, thang bộ, sảnh hầm, tường vây", n0(S.md_ram_doc), n0(S.md_ram_doc), "m²"]
+  ].map(x => [{ t: x[0] }, { t: x[1], align: RG }, { t: x[2], align: RG }, { t: x[3], align: CT }]),
+  [{ t: "Tổng nhu cầu", total: true }, { t: n0(R1.nhu_cau_ham), align: RG, total: true },
+  { t: n0(R2.nhu_cau_ham), align: RG, total: true }, { t: "m²", align: CT, total: true }],
+  [{ t: "Cân đối (thừa/thiếu)", total: true }, { t: sgM(R1.can_doi_ham, 0), align: RG, total: true },
+  { t: sgM(R2.can_doi_ham, 0), align: RG, total: true }, { t: "m²", align: CT, total: true }]]),
+  NOTE("Cảnh báo: phương án PA2 (" + S.md_tang_ham + " tầng hầm) chỉ khả thi nếu đồng thời được chấp thuận (i) chỉ giới xây dựng ngầm đến "
+    + n0(S.md_md_ham) + "% diện tích lô đất và (ii) chỉ tiêu đỗ xe ô tô tối thiểu áp dụng cho nhà ở xã hội ở mức "
+    + n2(R2.cho_tren_can) + " chỗ/căn. Nếu một trong hai điều kiện không đạt, phải quay lại phương án "
+    + S.md1_tang_ham + " tầng hầm và giá thành NOXH tăng thêm khoảng "
+    + n1(R1.gia_max - R2.gia_max) + " triệu đ/m² (xem Mục X)."),
+
+  H2("4.4. Hạ tầng xã hội"),
+  CAP("Bảng 4.5 - Nhu cầu hạ tầng xã hội theo quy mô dân số " + n0(R2.dan_so) + " người"),
+  T([2200, 1600, 2800, 1600], [hdr(["Chỉ tiêu", "Yêu cầu", "Phương án", "Trạng thái"]),
+  [{ t: "Nhà trẻ (" + nfM(S.md_ct_nhatre, 2) + " m²/người)" }, { t: n0(R2.htxh.nhatre) + " m² đất", align: RG },
+  { t: "Bố trí " + n0(S.md_san_nhatre) + " m² sàn tại tầng 1-2 khối đế + sân chơi trên mái đế; phần còn lại liên kết trường công lập trong bán kính 300 m" },
+  { t: "Cần xác nhận của cơ quan quản lý quy hoạch" }],
+  [{ t: "Trường tiểu học (" + nfM(S.md_ct_tieuhoc, 2) + " m²/người)" }, { t: n0(R2.htxh.tieuhoc) + " m² đất", align: RG },
+  { t: "Liên kết trường công lập trong bán kính 500 m theo Quy hoạch phân khu" }, { t: "Cần xác nhận" }],
+  [{ t: "Cây xanh công cộng (" + nfM(S.md_ct_cayxanh, 1) + " m²/người)" }, { t: n0(R2.htxh.cayxanh) + " m²", align: RG },
+  { t: "Liên kết công viên khu vực trong bán kính 500 m" }, { t: "Cần xác nhận" }],
+  [{ t: "Cây xanh trong lô (≥ " + n0(S.md_ct_cayxanh_lo) + "% diện tích đất)" }, { t: n0(R2.htxh.cayxanh_lo) + " m²", align: RG },
+  { t: "Bố trí trong ranh dự án và trên mái khối đế" }, { t: "Đạt" }],
+  [{ t: "Nhà sinh hoạt cộng đồng" }, { t: "Theo quy định", align: RG },
+  { t: "Bố trí trong khối đế (thuộc " + n0(S.md_san_tienich) + " m² tiện ích)" }, { t: "Đạt" }]])];
+
+  // ======================= V =======================
+  const gt = [
+    ["Suất vốn xây dựng khối tháp (PA2)", n1(S.md_sv_thap) + " triệu đ/m² sàn", "Đã tối ưu thiết kế; PA1: " + n1(S.md1_sv_thap)],
+    ["Suất vốn xây dựng khối đế", n1(S.md_sv_de) + " triệu đ/m² sàn", "Chiều cao tầng lớn, khẩu độ rộng"],
+    ["Suất vốn xây dựng tầng hầm", n1(S.md_sv_ham) + " triệu đ/m² sàn", "Xét tính phức tạp của thi công phần ngầm", 1],
+    ["Móng cọc khoan nhồi, tường vây", n0(S.md_mong_coc) + " tỷ đồng", "Khoản mục độc lập; PA1: " + n0(S.md1_mong_coc) + " tỷ", 1],
+    ["Chi phí GPMB", n1(S.md_dg_gpmb) + " triệu đ/m²", "Đối chiếu Bảng giá đất hiện hành"],
+    ["Thiết bị", n0(S.md_tl_thietbi) + "% chi phí xây dựng", "Thang máy, M&E, máy phát, trạm biến áp"],
+    ["Quản lý dự án / Tư vấn / Chi phí khác", n1(S.md_tl_qlda) + "% / " + n1(S.md_tl_tuvan) + "% / " + n1(S.md_tl_khac) + "%", "Theo định mức quản lý chi phí"],
+    ["Dự phòng phí", n0(S.md_tl_duphong) + "% (PA2) - " + n0(S.md1_tl_duphong) + "% (PA1)", "Gồm dự phòng khối lượng và trượt giá"],
+    ["Cơ cấu vốn vay", n0(S.md_tl_vonvay) + "% tổng chi phí", "Dư nợ bình quân " + n0(S.md_duno_bq) + "% trong " + n1(S.md_tg_vay) + " năm"],
+    ["Lãi suất vay", n1(S.md_ls_vay) + "%/năm (PA2)", "Gói tín dụng ưu đãi NOXH; PA1: " + n1(S.md1_ls_vay) + "%/năm"],
+    ["Lợi nhuận định mức phần NOXH", "Tối đa " + n0(S.md_ln_dinhmuc) + "%", "Khoản 2 Điều 85 Luật Nhà ở 2023 - RÀNG BUỘC CỨNG", 1],
+    ["Hệ số thông thủy / GFA", nfM(S.md_hs_tt / 100, 2), "Thiết kế hành lang giữa, lõi thang tối ưu"],
+    ["Giá thuê NOXH", n0(S.md_gia_thue) + " đ/m²/tháng", "Tương đương " + n1(R2.thue_thang_can / 1e6) + " triệu đ/căn/tháng"],
+    ["Tỷ lệ lấp đầy / chi phí vận hành cho thuê", n0(S.md_lapday) + "% / " + n0(S.md_vh_thue) + "% doanh thu", "Giả định thận trọng"],
+    ["Suất chiết khấu", n0(S.md_ck) + "%/năm", "Đánh giá hiệu quả tài chính"]
+  ];
+  const secV = [H1("V. CÁC GIẢ THIẾT VÀ CƠ SỞ TÍNH TOÁN"), CAP("Bảng 5.1 - Bảng giả thiết"),
+  T([500, 2500, 1900, 2300], [hdr(["TT", "Giả thiết", "Giá trị", "Cơ sở / ghi chú"]),
+  ...gt.map((x, i) => [{ t: i + 1, align: CT, total: !!x[3] }, { t: x[0], total: !!x[3] },
+  { t: x[1], align: CT, total: !!x[3] }, { t: x[2], total: !!x[3] }])])];
+
+  // ======================= VI =======================
+  const tmdtTable = (S_, R_, ten) => {
+    const rows = [
+      ["Bồi thường, hỗ trợ, tái định cư (GPMB)", R_.c_gpmb],
+      ["Tiền sử dụng đất (miễn theo Đ.85 Luật Nhà ở 2023)", 0],
+      ["Rà phá bom mìn, khảo sát địa hình - địa chất", S_.md_rapha],
+      ["Hạ tầng kỹ thuật nội khu", S_.md_ht_noikhu],
+      ["Hạ tầng kỹ thuật ngoài ranh, đấu nối, trạm biến áp", S_.md_ht_ngoairanh],
+      ["Móng cọc khoan nhồi, tường vây, xử lý nền", S_.md_mong_coc],
+      ["Xây dựng phần ngầm (" + n0(R_.san_ham) + " m² × " + n1(S_.md_sv_ham) + " tr/m²)", R_.c_ngam],
+      ["Xây dựng khối đế (" + n0(R_.san_de) + " m² × " + n1(S_.md_sv_de) + " tr/m²)", R_.c_de],
+      ["Xây dựng khối tháp (" + n0(R_.san_thap) + " m² × " + n1(S_.md_sv_thap) + " tr/m²)", R_.c_thap],
+      ["Thiết bị (thang máy, M&E, máy phát, TBA) - " + n0(S_.md_tl_thietbi) + "%", R_.c_tb],
+      ["PCCC chuyên dụng, kiểm định, nghiệm thu", S_.md_pccc],
+      ["Trang thiết bị nhà trẻ, nhà sinh hoạt cộng đồng", S_.md_tb_nhatre],
+      ["Quản lý dự án (" + n1(S_.md_tl_qlda) + "%)", R_.c_qlda],
+      ["Tư vấn đầu tư xây dựng (" + n1(S_.md_tl_tuvan) + "%)", R_.c_tuvan],
+      ["Chi phí khác (bảo hiểm, thẩm tra, quan trắc, kiểm toán) - " + n1(S_.md_tl_khac) + "%", R_.c_khac],
+      ["Chi phí bán hàng, quản lý bán hàng", S_.md_cp_banhang],
+      ["Vận hành tạm, chạy thử, nghiệm thu bàn giao", S_.md_cp_vanhanhtam]
+    ];
+    return T([550, 4650, 1900], [hdr(["TT", "Khoản mục chi phí", "Thành tiền (tỷ đồng)"]),
+    ...rows.map((x, i) => [{ t: i + 1, align: CT }, { t: x[0] }, { t: n2(x[1]), align: RG }]),
+    [{ t: "", total: true }, { t: "A. Cộng chi phí trước dự phòng và lãi vay", total: true },
+    { t: n2(R_.A), align: RG, total: true }],
+    [{ t: 18, align: CT }, { t: "Dự phòng phí (" + n0(S_.md_tl_duphong) + "%)" }, { t: n2(R_.c_dp), align: RG }],
+    [{ t: 19, align: CT }, { t: "Lãi vay trong thời gian xây dựng (" + n1(S_.md_ls_vay) + "%/năm)" },
+    { t: n2(R_.c_laivay), align: RG }],
+    [{ t: "", total: true }, { t: "B. TỔNG MỨC ĐẦU TƯ " + ten, total: true },
+    { t: n2(R_.tmdt), align: RG, total: true }]]);
+  };
+  const S1 = toPA1(S);
+  const secVI = [H1("VI. TỔNG MỨC ĐẦU TƯ"),
+  P("Hai phương án được lập song song để làm rõ tác động của các giải pháp tối ưu:"),
+  bl("PA1 - Giữ nguyên tiêu chuẩn và quy mô thiết kế của bản báo cáo cũ (" + S.md1_tang_ham
+    + " tầng hầm, suất vốn tiêu chuẩn), nhưng tính ĐỦ các khoản chi phí bị bỏ sót."),
+  bl("PA2 - Phương án kiến nghị, áp dụng đồng bộ 6 giải pháp tối ưu chi phí (xem Mục 6.3)."),
+  H2("6.1. Tổng mức đầu tư - PA1 (giữ nguyên tiêu chuẩn thiết kế)"),
+  CAP("Bảng 6.1 - Tổng mức đầu tư PA1"), tmdtTable(S1, R1, "PA1"),
+  H2("6.2. Tổng mức đầu tư - PA2 (phương án kiến nghị)"),
+  CAP("Bảng 6.2 - Tổng mức đầu tư PA2"), tmdtTable(S, R2, "PA2"),
+  H2("6.3. So sánh hai phương án và các giải pháp tối ưu"),
+  CAP("Bảng 6.3 - Sáu giải pháp tối ưu chi phí"),
+  T([500, 3400, 1400, 1800], [hdr(["TT", "Giải pháp", "Tác động", "Điều kiện áp dụng"]),
+  ...gp.map((x, i) => [{ t: i + 1, align: CT }, { t: x.gp },
+  { t: (x.thuhoi ? "Thu hồi " : "Giảm ") + n2(x.giam) + " tỷ", align: RG }, { t: x.dk }])]),
+  CAP("Bảng 6.4 - So sánh tổng hợp"),
+  T([2900, 1600, 1500, 1600], [hdr(["Chỉ tiêu", "Bản cũ", "PA1", "PA2 (kiến nghị)"]),
+  [{ t: "Số tầng hầm / diện tích sàn hầm (m²)" },
+  { t: S.md_old_tangham + " / " + n0(S.md_old_san_ham), align: RG },
+  { t: S.md1_tang_ham + " / " + n0(R1.san_ham), align: RG },
+  { t: S.md_tang_ham + " / " + n0(R2.san_ham), align: RG }],
+  [{ t: "Chi phí xây dựng phần ngầm (tỷ)", total: true },
+  { t: n2(S.md_old_ngam) + (S.md_old_ngam === 0 ? " (bỏ sót)" : ""), align: RG, total: true },
+  { t: n2(R1.c_ngam), align: RG, total: true }, { t: n2(R2.c_ngam), align: RG, total: true }],
+  [{ t: "Chi phí trước dự phòng, lãi vay (tỷ)" }, { t: n2(S.md_old_truocdp), align: RG },
+  { t: n2(R1.A), align: RG }, { t: n2(R2.A), align: RG }],
+  [{ t: "Dự phòng phí (tỷ)" }, { t: n2(S.md_old_duphong), align: RG },
+  { t: n2(R1.c_dp), align: RG }, { t: n2(R2.c_dp), align: RG }],
+  [{ t: "Lãi vay (tỷ)" }, { t: n2(S.md_old_laivay), align: RG },
+  { t: n2(R1.c_laivay), align: RG }, { t: n2(R2.c_laivay), align: RG }],
+  [{ t: "TỔNG MỨC ĐẦU TƯ (tỷ)", total: true }, { t: n2(S.md_old_tmdt), align: RG, total: true },
+  { t: n2(R1.tmdt), align: RG, total: true }, { t: n2(R2.tmdt), align: RG, total: true }],
+  [{ t: "Suất đầu tư / m² sàn xây dựng (triệu đ)" }, { t: "-", align: RG },
+  { t: n2(R1.suat_dt), align: RG }, { t: n2(R2.suat_dt), align: RG }]])];
+
+  // ======================= VII =======================
+  const secVII = [H1("VII. XÁC ĐỊNH GIÁ BÁN, GIÁ THUÊ NHÀ Ở XÃ HỘI"),
+  H2("7.1. Nguyên tắc"),
+  P("Giá bán nhà ở xã hội KHÔNG được xác định theo giá thị trường. Theo khoản 2 Điều 85 Luật Nhà ở 2023, giá bán được xây dựng theo phương pháp chi phí:"),
+  P("Giá bán = (Chi phí đầu tư xây dựng phần NOXH × " + nfM(1 + S.md_ln_dinhmuc / 100, 2)
+    + ") ÷ Diện tích thông thủy phần NOXH", { bold: true, align: CT }),
+  bl("Lợi nhuận định mức tối đa " + n0(S.md_ln_dinhmuc) + "% tổng chi phí đầu tư xây dựng phần diện tích NOXH."),
+  bl("Chi phí và lợi nhuận phần kinh doanh dịch vụ - thương mại phải hạch toán riêng, không tính vào giá thành NOXH và không bị khống chế lợi nhuận."),
+  bl("Giá bán do chủ đầu tư phê duyệt sau khi thuê tư vấn đủ điều kiện năng lực thẩm tra (Nghị định 192/2025/NĐ-CP), sau đó chịu kiểm toán, quyết toán."),
+
+  H2("7.2. Phân bổ chi phí giữa phần NOXH và phần TM-DV"),
+  P("Chi phí trực tiếp được phân bổ theo đối tượng thụ hưởng thực tế; chi phí gián tiếp phân bổ theo tỷ trọng chi phí trực tiếp."),
+  CAP("Bảng 7.1 - Phân bổ chi phí đầu tư PA2 (tỷ đồng)"),
+  T([3400, 1300, 1400, 1400], [hdr(["Khoản mục", "Tổng", "Phần NOXH", "Phần TM-DV"]),
+  [{ t: "Xây dựng khối tháp (trực tiếp)" }, { t: n2(R2.c_thap), align: RG },
+  { t: n2(R2.c_thap), align: RG }, { t: n2(0), align: RG }],
+  [{ t: "Xây dựng khối đế (theo diện tích chức năng)" }, { t: n2(R2.c_de), align: RG },
+  { t: n2(R2.de_noxh), align: RG }, { t: n2(R2.de_tm), align: RG }],
+  [{ t: "Xây dựng phần ngầm (theo diện tích đỗ xe sử dụng)" }, { t: n2(R2.c_ngam), align: RG },
+  { t: n2(R2.ham_noxh), align: RG }, { t: n2(R2.ham_tm), align: RG }],
+  [{ t: "Cộng chi phí trực tiếp", total: true }, { t: n2(R2.cp_tt), align: RG, total: true },
+  { t: n2(R2.cp_tt_noxh), align: RG, total: true }, { t: n2(R2.de_tm + R2.ham_tm), align: RG, total: true }],
+  [{ t: "Tỷ trọng phân bổ chi phí gián tiếp", total: true }, { t: "100%", align: RG, total: true },
+  { t: n1(R2.w_noxh * 100) + "%", align: RG, total: true },
+  { t: n1((1 - R2.w_noxh) * 100) + "%", align: RG, total: true }],
+  [{ t: "Chi phí gián tiếp (GPMB, hạ tầng, móng, thiết bị, tư vấn, dự phòng, lãi vay...)" },
+  { t: n2(R2.cp_gt), align: RG }, { t: n2(R2.gt_noxh), align: RG }, { t: n2(R2.gt_tm), align: RG }],
+  [{ t: "TỔNG CHI PHÍ ĐẦU TƯ", total: true }, { t: n2(R2.tmdt), align: RG, total: true },
+  { t: n2(R2.cp_noxh), align: RG, total: true }, { t: n2(R2.cp_tm), align: RG, total: true }]]),
+
+  H2("7.3. Giá bán nhà ở xã hội"), CAP("Bảng 7.2 - Xác định giá bán NOXH"),
+  T([3800, 1700, 1900], [hdr(["Nội dung", "PA1", "PA2 (kiến nghị)"]),
+  [{ t: "Chi phí đầu tư phần NOXH (tỷ đồng)" }, { t: n2(R1.cp_noxh), align: RG }, { t: n2(R2.cp_noxh), align: RG }],
+  [{ t: "Diện tích thông thủy phần NOXH (m²)" }, { t: n0(R1.tt_canho), align: RG }, { t: n0(R2.tt_canho), align: RG }],
+  [{ t: "Giá thành (triệu đ/m² thông thủy)" }, { t: n2(R1.gia_thanh), align: RG }, { t: n2(R2.gia_thanh), align: RG }],
+  [{ t: "Lợi nhuận định mức " + n0(S.md_ln_dinhmuc) + "%" }, { t: n2(R1.ln_dm_dv), align: RG }, { t: n2(R2.ln_dm_dv), align: RG }],
+  [{ t: "GIÁ BÁN TỐI ĐA (triệu đ/m²)", total: true }, { t: n2(R1.gia_max), align: RG, total: true },
+  { t: n2(R2.gia_max), align: RG, total: true }],
+  [{ t: "Giá bán áp dụng trong phương án (làm tròn)", total: true }, { t: "-", align: RG, total: true },
+  { t: n1(R2.gia_ban), align: RG, total: true }],
+  [{ t: "Lợi nhuận định mức thực tế tương ứng", total: true }, { t: "-", align: RG, total: true },
+  { t: n1(R2.tl_ln_noxh) + "%", align: RG, total: true }]]),
+  bl("Giá bán trên chưa bao gồm thuế giá trị gia tăng và kinh phí bảo trì phần sở hữu chung 2%."),
+  bl("Cần lập dự phòng cho rủi ro quyết toán: nếu giá theo kiểm toán thấp hơn giá đã ký hợp đồng, chủ đầu tư phải hoàn trả chênh lệch cho người mua; nếu cao hơn thì không được thu thêm."),
+
+  H2("7.4. Giá thuê nhà ở xã hội"), CAP("Bảng 7.3 - Phương án cho thuê"),
+  T([3300, 1900, 2200], [hdr(["Nội dung", "Giá trị", "Ghi chú"]),
+  [{ t: "Diện tích cho thuê (" + S.md_tl_chothue + "%)" }, { t: n0(R2.m2_thue) + " m²", align: RG },
+  { t: n0(R2.so_can_thue) + " căn" }],
+  [{ t: "Giá thuê" }, { t: n0(S.md_gia_thue) + " đ/m²/tháng", align: RG },
+  { t: "Tương đương " + n1(R2.thue_thang_can / 1e6) + " triệu đ/căn/tháng" }],
+  [{ t: "Tỷ lệ lấp đầy" }, { t: n0(S.md_lapday) + "%", align: RG }, { t: "Giả định thận trọng" }],
+  [{ t: "Chi phí vận hành" }, { t: n0(S.md_vh_thue) + "% doanh thu", align: RG }, { t: "" }],
+  [{ t: "Doanh thu thuần hằng năm", total: true }, { t: n2(R2.thue_nam) + " tỷ đồng", align: RG, total: true }, { t: "", total: true }],
+  [{ t: "Giá trị tài sản hình thành (chi phí + " + n0(S.md_ln_dinhmuc) + "%)" },
+  { t: n2(R2.gt_thue) + " tỷ đồng", align: RG }, { t: "Ghi nhận theo giá NOXH" }],
+  [{ t: "Tỷ suất sinh lời của tài sản cho thuê", total: true }, { t: n2(R2.ts_thue) + "%/năm", align: RG, total: true },
+  { t: "Thấp hơn nhiều lãi suất vay", total: true }],
+  [{ t: "Giá trị hiện tại dòng tiền thuê " + S.md_nam_thue + " năm (chiết khấu " + n0(S.md_ck) + "%)" },
+  { t: n2(R2.pv_thue) + " tỷ đồng", align: RG }, { t: "" }],
+  [{ t: "Khoảng cách giá trị", total: true }, { t: n2(R2.gap_thue) + " tỷ đồng", align: RG, total: true },
+  { t: "Xem phân tích tại Mục 9.2", total: true }]])];
+
+  // ======================= VIII =======================
+  const secVIII = [H1("VIII. DOANH THU VÀ HIỆU QUẢ TÀI CHÍNH"),
+  H2("8.1. Doanh thu phần kinh doanh dịch vụ - thương mại"),
+  CAP("Bảng 8.1 - Doanh thu TM-DV theo tầng"),
+  T([2400, 1700, 1900, 1600], [hdr(["Vị trí", "DT sàn (m²)", "DT thông thủy (m²)", "Thành tiền (tỷ đồng)"]),
+  ...R2.tmTang.map(x => [{ t: x.ten }, { t: n0(x.san), align: RG }, { t: n0(x.tt), align: RG },
+  { t: n2(x.tien), align: RG }]),
+  [{ t: "Cộng", total: true }, { t: n0(R2.san_tm), align: RG, total: true },
+  { t: n0(R2.tt_tm), align: RG, total: true }, { t: n2(R2.dt_tm), align: RG, total: true }]]),
+
+  H2("8.2. Tổng hợp doanh thu và giá trị"), CAP("Bảng 8.2 - Cơ cấu doanh thu / giá trị (PA2)"),
+  T([2700, 1700, 1500, 1700], [hdr(["Hạng mục", "Diện tích (m² TT)", "Đơn giá", "Thành tiền (tỷ đồng)"]),
+  [{ t: "Bán NOXH (" + (100 - S.md_tl_chothue) + "%)" }, { t: n0(R2.m2_ban), align: RG },
+  { t: n1(R2.gia_ban) + " tr/m²", align: CT }, { t: n2(R2.dt_noxh), align: RG }],
+  [{ t: "NOXH cho thuê (" + S.md_tl_chothue + "%) - giá trị tài sản hình thành" }, { t: n0(R2.m2_thue), align: RG },
+  { t: n1(R2.gia_ban) + " tr/m²", align: CT }, { t: n2(R2.gt_thue), align: RG }],
+  [{ t: "Kinh doanh dịch vụ - thương mại" }, { t: n0(R2.tt_tm), align: RG },
+  { t: "theo tầng", align: CT }, { t: n2(R2.dt_tm), align: RG }],
+  [{ t: "TỔNG DOANH THU / GIÁ TRỊ", total: true }, { t: "", total: true }, { t: "", total: true },
+  { t: n2(R2.dt_tong), align: RG, total: true }]]),
+
+  H2("8.3. Hiệu quả tài chính"), CAP("Bảng 8.3 - Hiệu quả tài chính PA2"),
+  T([4200, 2200, 1200], [hdr(["Chỉ tiêu", "Giá trị", "Đơn vị"]),
+  [{ t: "Tổng doanh thu / giá trị" }, { t: n2(R2.dt_tong), align: RG }, { t: "tỷ đồng", align: CT }],
+  [{ t: "Tổng mức đầu tư" }, { t: n2(R2.tmdt), align: RG }, { t: "tỷ đồng", align: CT }],
+  [{ t: "Lợi nhuận trước thuế", total: true }, { t: n2(R2.lntt), align: RG, total: true },
+  { t: "tỷ đồng", align: CT, total: true }],
+  [{ t: "Trong đó: lợi nhuận phần NOXH (bị khống chế)" },
+  { t: n2(R2.ln_noxh) + "  (" + n1(R2.tl_ln_noxh) + "% chi phí NOXH)", align: RG }, { t: "tỷ đồng", align: CT }],
+  [{ t: "Trong đó: lợi nhuận phần TM-DV (không khống chế)" }, { t: n2(R2.ln_tm), align: RG },
+  { t: "tỷ đồng", align: CT }],
+  [{ t: "Thuế thu nhập doanh nghiệp (NOXH " + S.md_thue_noxh + "% / TM-DV " + S.md_thue_tm + "%)" },
+  { t: n2(R2.thue_tndn), align: RG }, { t: "tỷ đồng", align: CT }],
+  [{ t: "Lợi nhuận sau thuế", total: true }, { t: n2(R2.lnst), align: RG, total: true },
+  { t: "tỷ đồng", align: CT, total: true }],
+  [{ t: "Tỷ suất lợi nhuận trước thuế / tổng mức đầu tư" }, { t: n1(R2.ts_ln_tmdt), align: RG }, { t: "%", align: CT }],
+  [{ t: "Vốn chủ sở hữu tối thiểu (" + n0(S.md_vcsh_min) + "% TMĐT)", total: true },
+  { t: n2(R2.vcsh), align: RG, total: true }, { t: "tỷ đồng", align: CT, total: true }],
+  [{ t: "Vốn vay dự kiến (" + n0(S.md_tl_vonvay) + "% TMĐT)" }, { t: n2(R2.von_vay), align: RG },
+  { t: "tỷ đồng", align: CT }]]),
+  P("Đáng lưu ý: " + n1(R2.tt_ln_tm) + "% lợi nhuận của dự án (" + n2(R2.ln_tm) + " tỷ trên tổng "
+    + n2(R2.lntt) + " tỷ) đến từ phần kinh doanh dịch vụ - thương mại chỉ chiếm "
+    + n1(R2.tl_tm_gfa * 100) + "% diện tích sàn. Đây là phần duy nhất không bị khống chế lợi nhuận và là yếu tố quyết định tính khả thi của dự án.")];
+
+  // ======================= IX =======================
+  const b = pas[0];
+  const secIX = [H1("IX. PHÂN TÍCH DÒNG TIỀN"),
+  H2("9.1. Dòng tiền 4 năm (PA2, giữ " + S.md_tl_chothue + "% cho thuê)"),
+  CAP("Bảng 9.1 - Dòng tiền dự kiến (tỷ đồng)"),
+  T([2400, 1350, 1350, 1350, 1350], [hdr(["Khoản mục", "Năm 1", "Năm 2", "Năm 3", "Năm 4"]),
+  ...[["Chi đầu tư", b.chi], ["Thu từ bán NOXH", b.thuN], ["Thu từ TM-DV", b.thuT]]
+    .map(x => [{ t: x[0] }, ...x[1].map(y => ({ t: n2(y), align: RG }))]),
+  [{ t: "Dòng tiền ròng", total: true }, ...b.tien.map(y => ({ t: n2(y), align: RG, total: true }))],
+  [{ t: "Lũy kế", total: true }, ...b.luyke.map(y => ({ t: n2(y), align: RG, total: true }))]]),
+  bl("Nhu cầu vốn cao nhất rơi vào cuối năm 3, khoảng " + n0(-Math.min.apply(null, b.luyke))
+    + " tỷ đồng - lớn hơn mức vốn chủ sở hữu tối thiểu (" + n2(R2.vcsh)
+    + " tỷ), phần chênh lệch phải thu xếp bằng vốn vay."),
+  bl("Sau 4 năm, dòng tiền lũy kế vẫn âm khoảng " + n0(-b.luyke[3]) + " tỷ đồng vì phần NOXH cho thuê ("
+    + S.md_tl_chothue + "%) chỉ tạo ra tài sản chứ không tạo ra tiền mặt."),
+
+  H2("9.2. Vấn đề then chốt: phần nhà ở xã hội cho thuê " + S.md_tl_chothue + "%"),
+  P("Phần cho thuê chiếm " + n2(R2.gt_thue) + " tỷ đồng vốn đầu tư nhưng chỉ tạo ra dòng tiền ròng "
+    + n2(R2.thue_nam) + " tỷ đồng/năm, tương đương tỷ suất " + n2(R2.ts_thue)
+    + "%/năm - thấp hơn cả lãi suất vay ưu đãi. Giá trị hiện tại của dòng tiền thuê trong "
+    + S.md_nam_thue + " năm chỉ đạt " + n2(R2.pv_thue) + " tỷ đồng, tức là thấp hơn "
+    + n2(R2.gap_thue) + " tỷ đồng so với chi phí bỏ ra."),
+  CAP("Bảng 9.2 - Tỷ suất hoàn vốn nội bộ (IRR) theo các kịch bản về phần cho thuê"),
+  T([4200, 1400, 2000], [hdr(["Kịch bản", "IRR dự án", "Đánh giá"]),
+  ...pas.map((p, i) => [{ t: p.label, total: i === 0 },
+  { t: isFinite(p.irr) ? pcM(p.irr * 100) : "—", align: RG, total: i === 0 },
+  { t: p.danhgia, total: i === 0 }])]),
+  P("Ba hướng xử lý, xếp theo thứ tự ưu tiên kiến nghị:"),
+  bl("Hướng 1 - Giữ cam kết " + S.md_tl_chothue + "% nhưng đề nghị Thành phố xác nhận cơ chế cho phép chuyển nhượng phần cho thuê sau 5 năm cho đối tượng thuộc diện thụ hưởng theo giá NOXH tại thời điểm bán. Đây là hướng vừa giữ được lợi thế khi xét duyệt, vừa đưa IRR về mức chấp nhận được ("
+    + (isFinite(pas[2].irr) ? pcM(pas[2].irr * 100) : "—") + ")."),
+  bl("Hướng 2 - Đề nghị bố trí nguồn vốn vay dài hạn ưu đãi (20 - 25 năm) riêng cho phần diện tích cho thuê, từ Quỹ đầu tư phát triển Thành phố hoặc Ngân hàng Chính sách xã hội, để giãn áp lực dòng tiền."),
+  bl("Hướng 3 - Điều chỉnh tỷ lệ cho thuê xuống mức thấp hơn trong dải khuyến khích, kết hợp cam kết ưu tiên bán cho các nhóm đối tượng chính sách.")];
+
+  // ======================= X =======================
+  const secX = [H1("X. PHÂN TÍCH RỦI RO VÀ ĐỘ NHẠY"),
+  H2("10.1. Độ nhạy của giá bán NOXH và tổng mức đầu tư"),
+  CAP("Bảng 10.1 - Phân tích độ nhạy (PA2)"),
+  T([3300, 1800, 1600, 1300], [hdr(["Kịch bản", "Giá bán NOXH (tr/m²)", "TMĐT (tỷ đồng)", "Chênh giá"]),
+  ...scen.map((s, i) => [{ t: s.label, total: i === 0 },
+  { t: n2(s.R.gia_max), align: RG, total: i === 0 },
+  { t: n1(s.R.tmdt), align: RG, total: i === 0 },
+  { t: sgM(s.chenh, 2), align: RG, total: i === 0 }])]),
+  bl("Hai biến số nhạy nhất là suất vốn xây dựng khối tháp và hiệu suất thông thủy - hai yếu tố hoàn toàn do thiết kế quyết định. Đây là lý do phải kiểm soát chặt giai đoạn thiết kế cơ sở."),
+  bl("Bản báo cáo cũ chỉ kiểm tra độ nhạy với giá bán, chi phí GPMB và lãi suất - bỏ qua suất vốn đầu tư, biến số chiếm tỷ trọng lớn nhất trong tổng mức đầu tư."),
+  H2("10.2. Ma trận rủi ro"), CAP("Bảng 10.2 - Nhận diện rủi ro và biện pháp"),
+  T([2700, 1100, 1400, 2800], [hdr(["Rủi ro", "Khả năng", "Mức độ", "Biện pháp giảm thiểu"]),
+  ...MODEL_RUIRO.map(x => [{ t: x[0] }, { t: x[1], align: CT }, { t: x[2], align: CT }, { t: x[3] }])])];
+
+  // ======================= XI =======================
+  const secXI = [H1("XI. TIẾN ĐỘ THỰC HIỆN"),
+  CAP("Bảng 11.1 - Tiến độ tổng thể " + S.md_thoigian + " tháng"),
+  T([1300, 1500, 3900, 1300], [hdr(["Giai đoạn", "Thời gian", "Nội dung công việc", "Kết quả"]),
+  ...tienDo.map(x => [{ t: x[0], align: CT }, { t: x[1], align: CT }, { t: x[2] }, { t: x[3] }])]),
+  NOTE("Thành phố yêu cầu hoàn thành giải phóng mặt bằng trong thời hạn tối đa 60 ngày đối với dự án quy mô dưới 10 ha kể từ khi được chấp thuận chủ trương đầu tư. Tiến độ Giai đoạn 1 cần được lập chi tiết theo mốc để bảo đảm tuân thủ.")];
+
+  // ======================= XII =======================
+  const datdao = Math.round(R2.san_ham * 3.5 / 1000) * 1000;
+  const secXII = [H1("XII. ĐÁNH GIÁ SƠ BỘ TÁC ĐỘNG MÔI TRƯỜNG VÀ HIỆU QUẢ KINH TẾ - XÃ HỘI"),
+  H2("12.1. Đánh giá sơ bộ tác động môi trường"),
+  bl("Giai đoạn thi công: bụi, tiếng ồn, nước thải thi công, đất đào từ " + S.md_tang_ham
+    + " tầng hầm (khoảng " + n0(datdao) + " m³) - cần phương án vận chuyển, đổ thải và che chắn; rung động ảnh hưởng công trình lân cận khi thi công tường vây và cọc khoan nhồi."),
+  bl("Giai đoạn vận hành: nước thải sinh hoạt của khoảng " + n0(R2.dan_so)
+    + " người - cần trạm xử lý nước thải cục bộ đạt quy chuẩn trước khi đấu nối; chất thải rắn sinh hoạt; khí thải và tiếng ồn từ khu vực đỗ xe."),
+  bl("Dự án thuộc đối tượng phải lập báo cáo đánh giá tác động môi trường - cần triển khai song song với thiết kế cơ sở."),
+  H2("12.2. Hiệu quả kinh tế - xã hội"),
+  T([3800, 3400], [hdr(["Nội dung", "Giá trị"]),
+  [{ t: "Số căn hộ nhà ở xã hội cung cấp" }, { t: n0(R2.so_can) + " căn" }],
+  [{ t: "Số người được giải quyết chỗ ở" }, { t: "khoảng " + n0(R2.dan_so) + " người" }],
+  [{ t: "Trong đó số căn cho thuê" }, { t: n0(R2.so_can_thue) + " căn - phục vụ công nhân, người lao động chưa đủ khả năng mua nhà" }],
+  [{ t: "Đóng góp vào chỉ tiêu NOXH của Thành phố" }, { t: "Góp phần thực hiện mục tiêu phát triển nhà ở xã hội giai đoạn 2025 - 2030" }],
+  [{ t: "Việc làm trong giai đoạn thi công" }, { t: "khoảng " + n0(Math.round(R2.san_xd / 150 / 50) * 50)
+    + " - " + n0(Math.round(R2.san_xd / 120 / 50) * 50) + " lao động thời điểm cao điểm" }],
+  [{ t: "Đóng góp ngân sách (thuế TNDN)" }, { t: n2(R2.thue_tndn) + " tỷ đồng" }]])];
+
+  // ======================= XIII =======================
+  const secXIII = [H1("XIII. KẾT LUẬN VÀ KIẾN NGHỊ"),
+  H2("13.1. Kết luận"), CAP("Bảng 13.1 - Tổng hợp kết quả"),
+  T([3300, 2200, 1900], [hdr(["Nội dung", "Kết quả", "So với bản cũ"]),
+  [{ t: "Tổng mức đầu tư" }, { t: n2(R2.tmdt) + " tỷ đồng", align: RG },
+  { t: sgM(R2.tmdt - S.md_old_tmdt) + " tỷ", align: RG }],
+  [{ t: "Giá bán NOXH theo phương pháp chi phí" }, { t: n1(R2.gia_ban) + " triệu đ/m² TT", align: RG },
+  { t: sgM(R2.gia_ban - S.md_old_gia, 1) + " tr/m²", align: RG }],
+  [{ t: "Tổng doanh thu / giá trị" }, { t: n2(R2.dt_tong) + " tỷ đồng", align: RG },
+  { t: sgM(R2.dt_tong - (S.md_old_dt_noxh + S.md_old_gt_thue + S.md_old_dt_tm)) + " tỷ", align: RG }],
+  [{ t: "Lợi nhuận trước thuế" }, { t: n2(R2.lntt) + " tỷ đồng", align: RG },
+  { t: sgM(R2.lntt - S.md_old_lntt) + " tỷ", align: RG }],
+  [{ t: "Tỷ suất lợi nhuận / TMĐT" }, { t: n1(R2.ts_ln_tmdt) + "%", align: RG },
+  { t: "bản cũ: " + n1(S.md_old_tsln) + "%", align: RG }],
+  [{ t: "IRR (giữ " + S.md_tl_chothue + "% cho thuê vĩnh viễn)" },
+  { t: isFinite(pas[0].irr) ? pcM(pas[0].irr * 100) : "—", align: RG }, { t: "bản cũ không tính", align: RG }],
+  [{ t: "IRR (được chuyển nhượng phần cho thuê sau 5 năm)" },
+  { t: isFinite(pas[2].irr) ? pcM(pas[2].irr * 100) : "—", align: RG }, { t: "bản cũ không tính", align: RG }],
+  [{ t: "Vốn chủ sở hữu tối thiểu cần có" }, { t: n2(R2.vcsh) + " tỷ đồng", align: RG },
+  { t: "bản cũ không nêu", align: RG }],
+  [{ t: "Tiền sử dụng đất phải nộp" }, { t: "0 đồng", align: RG }, { t: "không đổi", align: RG }]]),
+  P("Dự án có tính khả thi, nhưng tính khả thi đó phụ thuộc vào ba điều kiện đồng thời:"),
+  bl("Thứ nhất, phải áp dụng đầy đủ 6 giải pháp tối ưu chi phí tại Bảng 6.3. Nếu giữ nguyên tiêu chuẩn thiết kế ban đầu, giá bán NOXH lên tới "
+    + n2(R1.gia_max) + " triệu đ/m² và dự án khó được phê duyệt."),
+  bl("Thứ hai, phải có cơ chế xử lý phần NOXH cho thuê " + S.md_tl_chothue
+    + "%. Nếu giữ nguyên như đề xuất mà không có cơ chế hỗ trợ, IRR của dự án đạt "
+    + (isFinite(pas[0].irr) ? pcM(pas[0].irr * 100) : "—") + "."),
+  bl("Thứ ba, lợi nhuận của dự án phụ thuộc chủ yếu vào phần kinh doanh dịch vụ - thương mại tại khối đế. Phải bảo đảm được diện tích và vị trí thương mại như phương án, đồng thời hạch toán riêng theo đúng quy định."),
+  H2("13.2. Kiến nghị"), CAP("Bảng 13.2 - Kiến nghị theo thứ tự ưu tiên"),
+  T([500, 4200, 1600, 1100], [hdr(["TT", "Nội dung kiến nghị", "Cơ quan / đơn vị", "Thời hạn"]),
+  ...MODEL_KIENNGHI.map((x, i) => [{ t: i + 1, align: CT }, { t: x[0] }, { t: x[1] }, { t: x[2], align: CT }])])];
+
+  // ======================= PHỤ LỤC =======================
+  const dtMin = Math.min(S.md_ch1_dt, S.md_ch2_dt, S.md_ch3_dt);
+  const dtMax = Math.max(S.md_ch1_dt, S.md_ch2_dt, S.md_ch3_dt);
+  const plA = [new Paragraph({ children: [new PageBreak()] }),
+  H1("PHỤ LỤC A - BẢNG ĐỐI CHIẾU QUY CHUẨN"), CAP("Bảng A.1 - Đối chiếu chỉ tiêu quy hoạch"),
+  T([450, 2100, 1750, 2200, 900], [hdr(["TT", "Nội dung đối chiếu", "Giá trị PA", "Quy chuẩn / quy hoạch áp dụng", "Trạng thái"]),
+  ...[
+    ["Mật độ xây dựng thuần (đo tại hình chiếu lớn nhất - khối đế)", n0(S.md_md_de) + "%",
+      "Tra bảng theo diện tích lô đất " + n0(S.md_dt_dat) + " m² và chiều cao công trình; được tăng tối đa 1,5 lần theo Điều 85 Luật Nhà ở 2023",
+      "Cần trích dẫn nguyên văn"],
+    ["Hệ số sử dụng đất", n2(R2.far) + " lần",
+      "Theo Quy hoạch phân khu; được tăng tối đa 1,5 lần theo Điều 85 Luật Nhà ở 2023", "Cần đính kèm trích lục QHPK"],
+    ["Tầng cao", R2.tong_tang + " tầng", "Theo Quy hoạch phân khu", "Cần xác nhận"],
+    ["Chiều cao công trình", "≈ " + n1(R2.cao_ct) + " m (" + n2(S.md_chieucao_tang) + " m/tầng điển hình)",
+      "Kiểm tra tĩnh không và cấp công trình", "Cần xác định chính xác"],
+    ["Khoảng cách giữa các tháp", "Theo mặt bằng tổng thể",
+      "Theo quy định về khoảng cách công trình cao tầng", "Kiểm tra khi lập QHCT 1/500"],
+    ["Quy mô dân số", n0(R2.dan_so) + " người", "Trong giới hạn một đơn vị ở", "Đạt"],
+    ["Diện tích căn hộ NOXH", n0(dtMin) + " - " + n0(dtMax) + " m² thông thủy",
+      "Tối thiểu 25 m², tối đa 70 m²", dtMin >= 25 && dtMax <= 70 ? "Đạt" : "KHÔNG ĐẠT"],
+    ["Tỷ lệ diện tích sàn TM-DV", n1(R2.tl_tm_gfa * 100) + "%", "Tối đa 20% tổng diện tích sàn",
+      R2.tl_tm_gfa <= 0.2 ? "Đạt" : "KHÔNG ĐẠT"],
+    ["Chỗ đỗ xe", n0(R2.oto_tong) + " chỗ ô tô, " + n0(R2.xe_may) + " xe máy",
+      "QCVN 04:2021/BXD, có xét chỉ tiêu tối thiểu cho NOXH", "Cần chấp thuận chỉ tiêu"],
+    ["Cây xanh trong lô", "≥ " + n0(S.md_ct_cayxanh_lo) + "% diện tích đất",
+      "≥ " + n0(S.md_ct_cayxanh_lo) + "%", "Đạt"],
+    ["Hạ tầng xã hội (nhà trẻ, trường học, cây xanh công cộng)", "Bố trí trong dự án + liên kết ngoài ranh",
+      "Theo chỉ tiêu/người", "Cần xác nhận của cơ quan quản lý quy hoạch"]
+  ].map((x, i) => [{ t: i + 1, align: CT }, { t: x[0] }, { t: x[1] }, { t: x[2] },
+  { t: x[3], align: CT, bold: x[3].indexOf("KHÔNG") === 0 }])]),
+  NOTE("Cần lập thêm cột kiểm tra dự phòng theo QCVN 01:2026/BXD (hiệu lực 01/01/2027), để bảo đảm phương án không phải điều chỉnh khi bước sang giai đoạn thiết kế và cấp phép sau mốc này."),
+
+  H1("PHỤ LỤC B - DANH MỤC NỘI DUNG CẦN BỔ SUNG ĐỂ HOÀN THIỆN HỒ SƠ"),
+  T([500, 5000, 1900], [hdr(["TT", "Nội dung", "Ghi chú"]),
+  ...MODEL_PHULUCB.map((x, i) => [{ t: i + 1, align: CT }, { t: x[0] }, { t: x[1] }])]),
+
+  H1("PHỤ LỤC C - RÀ SOÁT TỰ ĐỘNG CÁC RÀNG BUỘC"),
+  T([1200, 6200], [hdr(["Mức độ", "Nội dung"]),
+  ...checks.map(c => [{ t: c.level === "danger" ? "VI PHẠM" : c.level === "warn" ? "LƯU Ý" : "ĐẠT", align: CT,
+    color: c.level === "danger" ? "9A2B2B" : c.level === "warn" ? "8A6412" : "1B5E3F", bold: true },
+  { t: c.text }])]),
+
+  P("", { after: 400 }),
+  P("Hà Nội, ngày " + now.getDate() + " tháng " + thang + " năm " + nam, { align: RG, italic: true, after: 300 }),
+  P("ĐẠI DIỆN CHỦ ĐẦU TƯ", { align: RG, bold: true })];
+
+  const doc = new Document({
+    styles: { default: { document: { run: { font: "Times New Roman", size: 24 } } } },
+    sections: [{
+      properties: {
+        page: {
+          size: { width: 11907, height: 16840 },
+          margin: { top: 1134, bottom: 1134, left: 1417, right: 1134 }
+        }
+      },
+      children: [...bia, ...ghichu, ...secI, ...secII, ...secIII, ...secIV, ...secV,
+        ...secVI, ...secVII, ...secVIII, ...secIX, ...secX, ...secXI, ...secXII,
+        ...secXIII, ...plA]
+    }]
+  });
+  const blob = await Packer.toBlob(doc);
+  downloadBlob(blob, "BaoCaoTomTatDauTu_" + slugVN(S.md_ten_da) + "_"
+    + now.toISOString().slice(0, 10) + ".docx");
+}
+
+// ---------------------------------------------------------------------------
+// XUẤT EXCEL — 7 sheet, cấu trúc bám theo mô hình tài chính của Báo cáo
+// ---------------------------------------------------------------------------
+async function exportModelExcel(S, R2, R1, scen, pas, checks) {
+  const ExcelJS = await loadExcelJS();
+  const wb = new ExcelJS.Workbook();
+  wb.creator = S.md_nguoi_lap || "NOXH Calculator";
+  wb.created = new Date();
+
+  const NAVY = "FF0F2940", GOLD = "FFFFF2CC", BLUE = "FF1A56A8", GREEN = "FF1B5E3F",
+    LIGHT = "FFDCE9F5", GRAY = "FF5B5750", GRP = "FFD9E2EC", RED = "FF9A2B2B";
+  const S1 = toPA1(S);
+  const gp = modelGiaiPhap(S, R1, R2);
+
+  const band = (ws, row, from, to, fill, font) => {
+    for (let c = from; c <= to; c++) {
+      ws.getCell(row, c).fill = { type: "pattern", pattern: "solid", fgColor: { argb: fill } };
+      if (font) ws.getCell(row, c).font = font;
+    }
+  };
+  const sh = (ws, row, text, to) => {
+    band(ws, row, 2, to || 4, NAVY, { bold: true, color: { argb: "FFFFFFFF" }, size: 11 });
+    ws.getCell(row, 2).value = text;
+  };
+  const line = (ws, row, label, val, unit, note, o = {}) => {
+    ws.getCell(row, 2).value = label;
+    const c = ws.getCell(row, 3);
+    c.value = val;
+    if (typeof val === "number") c.numFmt = o.fmt || "#,##0.00";
+    if (o.input) c.font = { color: { argb: BLUE }, bold: true };
+    if (o.key) c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: GOLD } };
+    if (o.total) band(ws, row, 2, 5, LIGHT, { bold: true, color: { argb: NAVY } });
+    ws.getCell(row, 4).value = unit || "";
+    ws.getCell(row, 4).font = { color: { argb: GRAY }, size: 10 };
+    if (note) {
+      ws.getCell(row, 5).value = note;
+      ws.getCell(row, 5).font = { color: { argb: GRAY }, size: 10, italic: true };
+    }
+  };
+  const head = (ws, row, arr, from) => {
+    arr.forEach((t, i) => {
+      const c = ws.getCell(row, (from || 2) + i);
+      c.value = t;
+      c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: NAVY } };
+      c.font = { bold: true, color: { argb: "FFFFFFFF" }, size: 10.5 };
+      c.alignment = { wrapText: true, vertical: "middle", horizontal: "center" };
+    });
+    ws.getRow(row).height = 30;
+  };
+
+  // ===== 1. HUONGDAN =====
+  const w1 = wb.addWorksheet("HUONGDAN");
+  w1.views = [{ showGridLines: false }];
+  [3, 44, 18, 14, 66].forEach((x, i) => w1.getColumn(i + 1).width = x);
+  w1.getCell("B2").value = "MÔ HÌNH TÀI CHÍNH - DỰ ÁN " + (S.md_ten_da || "").toUpperCase();
+  w1.getCell("B2").font = { bold: true, size: 14, color: { argb: NAVY } };
+  w1.getCell("B3").value = S.md_diadiem + " — " + S.md_chudautu + " — lập ngày "
+    + new Date().toLocaleDateString("vi-VN");
+  w1.getCell("B3").font = { italic: true, color: { argb: GRAY } };
+  sh(w1, 5, "QUY ƯỚC MÀU", 5);
+  [["Chữ xanh dương", "Ô NHẬP LIỆU - đây là những ô duy nhất được phép sửa"],
+  ["Nền vàng", "Giả thiết then chốt, ảnh hưởng lớn nhất tới kết quả"],
+  ["Chữ đen", "Công thức - không sửa"],
+  ["Nền xanh nhạt", "Kết quả tổng hợp"]].forEach((p, i) => {
+    w1.getCell(6 + i, 2).value = p[0]; w1.getCell(6 + i, 3).value = p[1];
+  });
+  sh(w1, 11, "CẤU TRÚC MÔ HÌNH", 5);
+  [["GIATHIET", "Toàn bộ giả thiết đầu vào của PA2 và PA1. Chỉ cần sửa ở đây là toàn bộ mô hình tự tính lại."],
+  ["MOHINH", "Chuỗi tính toán: quy mô → tổng mức đầu tư → phân bổ chi phí → giá bán NOXH → hiệu quả. Cột C là PA2 (kiến nghị), cột D là PA1, các cột sau là kịch bản độ nhạy."],
+  ["GIAIPHAP", "Sáu giải pháp tối ưu chi phí và bảng so sánh tổng hợp bản cũ / PA1 / PA2."],
+  ["DONGTIEN", "Dòng tiền 4 năm và IRR theo 4 phương án xử lý phần NOXH cho thuê."],
+  ["DOICHIEU", "So sánh với báo cáo trước và giải thích nguyên nhân chênh lệch."],
+  ["KIEMTRA", "Rà soát tự động các ràng buộc pháp lý và kỹ thuật."]].forEach((p, i) => {
+    w1.getCell(12 + i, 2).value = p[0];
+    w1.getCell(12 + i, 2).font = { bold: true, color: { argb: NAVY } };
+    w1.getCell(12 + i, 3).value = p[1];
+    w1.mergeCells(12 + i, 3, 12 + i, 5);
+    w1.getCell(12 + i, 3).alignment = { wrapText: true, vertical: "top" };
+    w1.getRow(12 + i).height = 26;
+  });
+  sh(w1, 19, "RÀNG BUỘC PHÁP LÝ ĐÃ CÀI VÀO MÔ HÌNH", 5);
+  [
+    "Giá bán = (Chi phí đầu tư xây dựng phần NOXH × " + nfM(1 + S.md_ln_dinhmuc / 100, 2)
+      + ") ÷ Diện tích thông thủy phần NOXH. Lợi nhuận định mức tối đa " + S.md_ln_dinhmuc
+      + "% chi phí đầu tư phần NOXH (khoản 2 Điều 85 Luật Nhà ở 2023).",
+    "Chi phí và lợi nhuận phần kinh doanh dịch vụ - thương mại hạch toán riêng, không tính vào giá thành NOXH và không bị khống chế lợi nhuận.",
+    "Diện tích sàn kinh doanh dịch vụ - thương mại không vượt quá 20% tổng diện tích sàn dự án.",
+    "Diện tích thông thủy mỗi căn hộ nằm trong khoảng 25 - 70 m².",
+    "Tiền sử dụng đất được miễn cho toàn bộ diện tích đất dự án.",
+    "Quy mô tầng hầm xác định TỪ nhu cầu đỗ xe, không từ mật độ xây dựng ngầm định trước."
+  ].forEach((t, i) => {
+    w1.getCell(20 + i, 2).value = "•";
+    w1.getCell(20 + i, 3).value = t;
+    w1.mergeCells(20 + i, 3, 20 + i, 5);
+    w1.getCell(20 + i, 3).alignment = { wrapText: true, vertical: "top" };
+    w1.getRow(20 + i).height = 26;
+  });
+  w1.getCell("B27").value = "LƯU Ý";
+  w1.getCell("B27").font = { bold: true, color: { argb: RED } };
+  w1.getCell("C27").value = "Số liệu là số liệu sơ bộ giai đoạn đề xuất chủ trương đầu tư, lập trên cơ sở suất vốn đầu tư ước tính. Phải cập nhật sau khi có kết quả khảo sát địa chất, thiết kế cơ sở và dự toán chi tiết.";
+  w1.mergeCells("C27:E27");
+  w1.getCell("C27").alignment = { wrapText: true, vertical: "top" };
+  w1.getRow(27).height = 30;
+
+  // ===== 2. GIATHIET =====
+  const w2 = wb.addWorksheet("GIATHIET");
+  w2.views = [{ showGridLines: false, state: "frozen", ySplit: 3 }];
+  [3, 52, 16, 16, 44].forEach((x, i) => w2.getColumn(i + 1).width = x);
+  w2.getCell("B2").value = "BẢNG GIẢ THIẾT ĐẦU VÀO";
+  w2.getCell("B2").font = { bold: true, size: 13, color: { argb: NAVY } };
+  w2.getCell("B3").value = "Chỉ sửa các ô chữ xanh dương ở cột C. Ô nền vàng là giả thiết then chốt.";
+  w2.getCell("B3").font = { italic: true, color: { argb: GRAY } };
+  let r2 = 5;
+  MODEL_SECTIONS.forEach(sec => {
+    sh(w2, r2, sec.title.replace(/^[A-Z0-9]+ · /, "").toUpperCase(), 5); r2++;
+    sec.fields.forEach(f => {
+      line(w2, r2, f.l, S[f.k], f.u, "", { input: true, key: f.key, fmt: "#,##0.####" });
+      r2++;
+    });
+    r2++;
+  });
+  sh(w2, r2, "KIỂM TRA", 5); r2++;
+  line(w2, r2++, "Diện tích sàn TM khai báo theo tầng", R2.san_tm_kb, "m²", "", { fmt: "#,##0" });
+  line(w2, r2++, "Diện tích sàn TM còn lại của khối đế", R2.san_tm, "m²", "", { fmt: "#,##0" });
+  line(w2, r2++, "Chênh lệch (phải bằng 0)", R2.lech_tm, "m²", "", { fmt: "#,##0", total: true });
+  line(w2, r2++, "Tổng tỷ lệ cơ cấu căn hộ (phải bằng 100%)",
+    (S.md_ch1_tl + S.md_ch2_tl + S.md_ch3_tl) / 100, "", "", { fmt: "0.0%", total: true });
+
+  // ===== 3. MOHINH =====
+  const cols = [{ label: "PA2 - KIẾN NGHỊ", s: S, R: R2 }, { label: "PA1 - GIỮ TIÊU CHUẨN", s: S1, R: R1 }]
+    .concat(scen.slice(1).map(x => ({ label: x.label, s: x.s, R: x.R })));
+  const w3 = wb.addWorksheet("MOHINH");
+  w3.views = [{ showGridLines: false, state: "frozen", xSplit: 2, ySplit: 4 }];
+  w3.getColumn(1).width = 3; w3.getColumn(2).width = 46;
+  cols.forEach((c, i) => w3.getColumn(3 + i).width = 17);
+  w3.getColumn(3 + cols.length).width = 12;
+  w3.getCell("B2").value = "MÔ HÌNH TÍNH TOÁN VÀ BẢNG KỊCH BẢN";
+  w3.getCell("B2").font = { bold: true, size: 13, color: { argb: NAVY } };
+  w3.getCell("B3").value = "Cột C là phương án kiến nghị (PA2), cột D là PA1. Mỗi cột tiếp theo chỉ thay đổi một giả thiết so với PA2.";
+  w3.getCell("B3").font = { italic: true, color: { argb: GRAY } };
+  head(w3, 4, ["CHỈ TIÊU"].concat(cols.map(c => c.label)).concat(["Đơn vị"]));
+
+  let r3 = 5;
+  const grp = t => {
+    band(w3, r3, 2, 3 + cols.length, GRP, { bold: true, color: { argb: NAVY } });
+    w3.getCell(r3, 2).value = t; r3++;
+  };
+  const rowS = (label, pick, unit, fmt, total) => {
+    w3.getCell(r3, 2).value = label;
+    cols.forEach((c, i) => {
+      const cell = w3.getCell(r3, 3 + i);
+      cell.value = pick(c.R, c.s);
+      cell.numFmt = fmt || "#,##0.00";
+      if (i < 2) cell.font = { bold: true };
+    });
+    w3.getCell(r3, 3 + cols.length).value = unit || "";
+    w3.getCell(r3, 3 + cols.length).font = { color: { argb: GRAY }, size: 10 };
+    if (total) band(w3, r3, 2, 3 + cols.length, LIGHT, { bold: true, color: { argb: NAVY } });
+    r3++;
+  };
+
+  grp("I. GIẢ THIẾT THAY ĐỔI THEO KỊCH BẢN");
+  [["Suất vốn xây dựng khối tháp", "md_sv_thap", "tr/m²"],
+  ["Suất vốn xây dựng khối đế", "md_sv_de", "tr/m²"],
+  ["Suất vốn xây dựng tầng hầm", "md_sv_ham", "tr/m²"],
+  ["Số tầng hầm", "md_tang_ham", "tầng"],
+  ["Mật độ xây dựng ngầm", "md_md_ham", "%"],
+  ["Chỉ tiêu ô tô căn hộ", "md_ct_oto_o", "m²/chỗ"],
+  ["Móng cọc, tường vây", "md_mong_coc", "tỷ"],
+  ["Đơn giá GPMB", "md_dg_gpmb", "tr/m²"],
+  ["Hệ số thông thủy / GFA", "md_hs_tt", "%"],
+  ["Tỷ lệ dự phòng phí", "md_tl_duphong", "%"],
+  ["Lãi suất vay", "md_ls_vay", "%/năm"],
+  ["Dư nợ bình quân", "md_duno_bq", "%"]].forEach(x => rowS(x[0], (_, s) => s[x[1]], x[2], "#,##0.###"));
+
+  grp("II. QUY MÔ DỰ ÁN");
+  [["Diện tích sàn khối đế", R => R.san_de, "m²", "#,##0"],
+  ["Diện tích sàn khối tháp", R => R.san_thap, "m²", "#,##0"],
+  ["Tổng diện tích sàn nổi (GFA)", R => R.gfa, "m²", "#,##0"],
+  ["Diện tích sàn tầng hầm", R => R.san_ham, "m²", "#,##0"],
+  ["Tổng diện tích sàn xây dựng", R => R.san_xd, "m²", "#,##0"],
+  ["Hệ số sử dụng đất (FAR)", R => R.far, "lần", "#,##0.00"],
+  ["Diện tích thông thủy căn hộ", R => R.tt_canho, "m²", "#,##0"],
+  ["Diện tích bình quân căn hộ", R => R.dtbq, "m²", "#,##0.0"],
+  ["Số căn hộ", R => R.so_can, "căn", "#,##0"],
+  ["   Trong đó: căn hộ để bán", R => R.so_can_ban, "căn", "#,##0"],
+  ["   Trong đó: căn hộ cho thuê", R => R.so_can_thue, "căn", "#,##0"],
+  ["Quy mô dân số", R => R.dan_so, "người", "#,##0"],
+  ["Diện tích sàn TM-DV", R => R.san_tm, "m²", "#,##0"],
+  ["Tỷ lệ sàn TM-DV / GFA (trần 20%)", R => R.tl_tm_gfa, "", "0.0%"],
+  ["Số chỗ đỗ ô tô căn hộ", R => R.oto_o, "chỗ", "#,##0"],
+  ["Chỉ tiêu tương ứng", R => R.cho_tren_can, "chỗ/căn", "#,##0.00"],
+  ["Số chỗ đỗ ô tô TM-DV", R => R.oto_tm, "chỗ", "#,##0"],
+  ["Số xe máy", R => R.xe_may, "xe", "#,##0"],
+  ["Nhu cầu diện tích tầng hầm", R => R.nhu_cau_ham, "m²", "#,##0"],
+  ["Cân đối tầng hầm (thừa/thiếu)", R => R.can_doi_ham, "m²", "#,##0"]]
+    .forEach(x => rowS(x[0], x[1], x[2], x[3]));
+
+  grp("III. TỔNG MỨC ĐẦU TƯ (tỷ đồng)");
+  [["1. Bồi thường, hỗ trợ, GPMB", R => R.c_gpmb],
+  ["2. Tiền sử dụng đất (miễn)", () => 0],
+  ["3. Rà phá bom mìn, khảo sát", (_, s) => s.md_rapha],
+  ["4. Hạ tầng kỹ thuật nội khu", (_, s) => s.md_ht_noikhu],
+  ["5. Hạ tầng kỹ thuật ngoài ranh", (_, s) => s.md_ht_ngoairanh],
+  ["6. Móng cọc khoan nhồi, tường vây", (_, s) => s.md_mong_coc],
+  ["7. Xây dựng phần ngầm", R => R.c_ngam],
+  ["8. Xây dựng khối đế", R => R.c_de],
+  ["9. Xây dựng khối tháp", R => R.c_thap],
+  ["10. Thiết bị", R => R.c_tb],
+  ["11. PCCC chuyên dụng, kiểm định", (_, s) => s.md_pccc],
+  ["12. Trang thiết bị nhà trẻ, SHCĐ", (_, s) => s.md_tb_nhatre],
+  ["13. Quản lý dự án", R => R.c_qlda],
+  ["14. Tư vấn đầu tư xây dựng", R => R.c_tuvan],
+  ["15. Chi phí khác", R => R.c_khac],
+  ["16. Chi phí bán hàng", (_, s) => s.md_cp_banhang],
+  ["17. Vận hành tạm, nghiệm thu", (_, s) => s.md_cp_vanhanhtam]].forEach(x => rowS(x[0], x[1], "tỷ"));
+  rowS("A. Cộng trước dự phòng và lãi vay", R => R.A, "tỷ", "#,##0.00", true);
+  rowS("18. Dự phòng phí", R => R.c_dp, "tỷ");
+  rowS("19. Lãi vay trong thời gian xây dựng", R => R.c_laivay, "tỷ");
+  rowS("B. TỔNG MỨC ĐẦU TƯ", R => R.tmdt, "tỷ", "#,##0.00", true);
+  rowS("Suất đầu tư / m² sàn xây dựng", R => R.suat_dt, "tr/m²", "#,##0.00");
+
+  grp("IV. PHÂN BỔ CHI PHÍ VÀ XÁC ĐỊNH GIÁ BÁN NOXH");
+  [["Chi phí trực tiếp (tháp + đế + hầm)", R => R.cp_tt],
+  ["   Khối đế phân bổ cho NOXH", R => R.de_noxh],
+  ["   Khối đế phân bổ cho TM-DV", R => R.de_tm],
+  ["   Tầng hầm phân bổ cho NOXH", R => R.ham_noxh],
+  ["   Tầng hầm phân bổ cho TM-DV", R => R.ham_tm],
+  ["Chi phí trực tiếp phần NOXH", R => R.cp_tt_noxh]].forEach(x => rowS(x[0], x[1], "tỷ"));
+  rowS("Tỷ trọng phân bổ chi phí gián tiếp cho NOXH", R => R.w_noxh, "", "0.00%");
+  rowS("Chi phí gián tiếp", R => R.cp_gt, "tỷ");
+  rowS("CHI PHÍ ĐẦU TƯ PHẦN NOXH", R => R.cp_noxh, "tỷ", "#,##0.00", true);
+  rowS("CHI PHÍ ĐẦU TƯ PHẦN TM-DV", R => R.cp_tm, "tỷ", "#,##0.00", true);
+  rowS("Giá thành NOXH", R => R.gia_thanh, "tr/m² TT", "#,##0.00");
+  rowS("Lợi nhuận định mức", R => R.ln_dm_dv, "tr/m² TT", "#,##0.00");
+  rowS("GIÁ BÁN TỐI ĐA", R => R.gia_max, "tr/m² TT", "#,##0.00", true);
+  rowS("Giá bán áp dụng (làm tròn 0,5 triệu)", R => R.gia_ban, "tr/m² TT", "#,##0.0", true);
+
+  grp("V. DOANH THU VÀ HIỆU QUẢ TÀI CHÍNH");
+  [["Diện tích NOXH để bán", R => R.m2_ban, "m²", "#,##0"],
+  ["Diện tích NOXH cho thuê", R => R.m2_thue, "m²", "#,##0"],
+  ["Doanh thu bán NOXH", R => R.dt_noxh, "tỷ"],
+  ["Giá trị tài sản NOXH cho thuê", R => R.gt_thue, "tỷ"],
+  ["Doanh thu kinh doanh TM-DV", R => R.dt_tm, "tỷ"]].forEach(x => rowS(x[0], x[1], x[2], x[3]));
+  rowS("TỔNG DOANH THU / GIÁ TRỊ", R => R.dt_tong, "tỷ", "#,##0.00", true);
+  rowS("Lợi nhuận trước thuế", R => R.lntt, "tỷ");
+  rowS("   Lợi nhuận phần NOXH", R => R.ln_noxh, "tỷ");
+  rowS("   Tỷ lệ lợi nhuận định mức thực tế (trần " + S.md_ln_dinhmuc + "%)",
+    R => R.tl_ln_noxh / 100, "", "0.00%");
+  rowS("   Lợi nhuận phần TM-DV", R => R.ln_tm, "tỷ");
+  rowS("   Tỷ trọng lợi nhuận TM-DV / tổng lợi nhuận", R => R.tt_ln_tm / 100, "", "0.0%");
+  rowS("Thuế thu nhập doanh nghiệp", R => R.thue_tndn, "tỷ");
+  rowS("Lợi nhuận sau thuế", R => R.lnst, "tỷ", "#,##0.00", true);
+  rowS("Tỷ suất lợi nhuận trước thuế / TMĐT", R => R.ts_ln_tmdt / 100, "", "0.00%");
+  rowS("Vốn chủ sở hữu tối thiểu", R => R.vcsh, "tỷ");
+  rowS("Vốn vay dự kiến", R => R.von_vay, "tỷ");
+
+  grp("VI. HIỆU QUẢ PHẦN NOXH CHO THUÊ");
+  rowS("Doanh thu thuần cho thuê hằng năm", R => R.thue_nam, "tỷ", "#,##0.000");
+  rowS("Tỷ suất sinh lời trên giá trị tài sản", R => R.ts_thue / 100, "/năm", "0.00%");
+  rowS("Giá trị hiện tại dòng tiền thuê", R => R.pv_thue, "tỷ");
+  rowS("Khoảng cách giá trị (tài sản − PV dòng thuê)", R => R.gap_thue, "tỷ");
+
+  // ===== 4. GIAIPHAP =====
+  const w4 = wb.addWorksheet("GIAIPHAP");
+  w4.views = [{ showGridLines: false }];
+  [3, 6, 62, 16, 46].forEach((x, i) => w4.getColumn(i + 1).width = x);
+  w4.getCell("B2").value = "SÁU GIẢI PHÁP TỐI ƯU CHI PHÍ VÀ SO SÁNH PHƯƠNG ÁN";
+  w4.getCell("B2").font = { bold: true, size: 13, color: { argb: NAVY } };
+  head(w4, 4, ["TT", "Giải pháp", "Tác động (tỷ)", "Điều kiện áp dụng"]);
+  gp.forEach((x, i) => {
+    const rr = 5 + i;
+    w4.getCell(rr, 2).value = i + 1;
+    w4.getCell(rr, 3).value = x.gp;
+    w4.getCell(rr, 3).alignment = { wrapText: true, vertical: "top" };
+    w4.getCell(rr, 4).value = (x.thuhoi ? 1 : -1) * x.giam;
+    w4.getCell(rr, 4).numFmt = "#,##0.00";
+    w4.getCell(rr, 4).font = { bold: true, color: { argb: GREEN } };
+    w4.getCell(rr, 5).value = x.dk;
+    w4.getCell(rr, 5).alignment = { wrapText: true, vertical: "top" };
+    w4.getRow(rr).height = 30;
+  });
+  let r4 = 5 + gp.length + 2;
+  w4.getCell(r4, 2).value = "SO SÁNH TỔNG HỢP";
+  w4.getCell(r4, 2).font = { bold: true, size: 12, color: { argb: NAVY } };
+  r4 += 2;
+  head(w4, r4, ["Chỉ tiêu", "Bản cũ", "PA1", "PA2 (kiến nghị)"], 3);
+  r4++;
+  [["Số tầng hầm", S.md_old_tangham, S1.md_tang_ham, S.md_tang_ham, "#,##0"],
+  ["Diện tích sàn hầm (m²)", S.md_old_san_ham, R1.san_ham, R2.san_ham, "#,##0"],
+  ["Chi phí xây dựng phần ngầm (tỷ)", S.md_old_ngam, R1.c_ngam, R2.c_ngam, "#,##0.00"],
+  ["Chi phí trước dự phòng, lãi vay (tỷ)", S.md_old_truocdp, R1.A, R2.A, "#,##0.00"],
+  ["Dự phòng phí (tỷ)", S.md_old_duphong, R1.c_dp, R2.c_dp, "#,##0.00"],
+  ["Lãi vay (tỷ)", S.md_old_laivay, R1.c_laivay, R2.c_laivay, "#,##0.00"],
+  ["TỔNG MỨC ĐẦU TƯ (tỷ)", S.md_old_tmdt, R1.tmdt, R2.tmdt, "#,##0.00", 1],
+  ["Suất đầu tư / m² sàn xây dựng (tr)", null, R1.suat_dt, R2.suat_dt, "#,##0.00"],
+  ["Giá bán tối đa (tr/m² TT)", S.md_old_gia, R1.gia_max, R2.gia_max, "#,##0.00", 1]]
+    .forEach(x => {
+      w4.getCell(r4, 3).value = x[0];
+      [x[1], x[2], x[3]].forEach((v, i) => {
+        const c = w4.getCell(r4, 4 + i);
+        c.value = v === null ? "-" : v;
+        if (typeof v === "number") c.numFmt = x[4];
+      });
+      if (x[5]) band(w4, r4, 3, 6, LIGHT, { bold: true, color: { argb: NAVY } });
+      r4++;
+    });
+
+  // ===== 5. DONGTIEN =====
+  const w5 = wb.addWorksheet("DONGTIEN");
+  w5.views = [{ showGridLines: false }];
+  [3, 46, 22, 22, 22, 22].forEach((x, i) => w5.getColumn(i + 1).width = x);
+  w5.getCell("B2").value = "DÒNG TIỀN VÀ TỶ SUẤT HOÀN VỐN NỘI BỘ";
+  w5.getCell("B2").font = { bold: true, size: 13, color: { argb: NAVY } };
+  w5.getCell("B3").value = "Mọi số liệu liên kết từ phương án kiến nghị (PA2) của sheet MOHINH.";
+  w5.getCell("B3").font = { italic: true, color: { argb: GRAY } };
+  line(w5, 4, "Tốc độ tăng giá NOXH danh nghĩa (kịch bản chuyển nhượng)",
+    S.md_tang_gia / 100, "", "", { input: true, fmt: "0.0%" });
+  head(w5, 6, ["DÒNG TIỀN PA2 (tỷ đồng)", "Năm 1", "Năm 2", "Năm 3", "Năm 4"]);
+  const b = pas[0];
+  let r5 = 7;
+  [["Chi đầu tư", b.chi], ["Thu tiền bán NOXH", b.thuN], ["Thu tiền TM-DV", b.thuT],
+  ["Dòng tiền ròng", b.tien, 1], ["Lũy kế", b.luyke, 1]].forEach(x => {
+    w5.getCell(r5, 2).value = x[0];
+    x[1].forEach((v, i) => {
+      w5.getCell(r5, 3 + i).value = v;
+      w5.getCell(r5, 3 + i).numFmt = "#,##0.00";
+    });
+    if (x[2]) band(w5, r5, 2, 6, LIGHT, { bold: true, color: { argb: NAVY } });
+    r5++;
+  });
+  line(w5, ++r5, "Vốn hóa dòng tiền thuê " + S.md_nam_thue + " năm (nếu ghi nhận cuối năm 4)",
+    b.pv, "tỷ", "", { fmt: "#,##0.00" });
+  r5 += 2;
+  sh(w5, r5, "IRR THEO PHƯƠNG ÁN XỬ LÝ PHẦN NOXH CHO THUÊ", 6); r5++;
+  head(w5, r5, ["Chỉ tiêu"].concat(pas.map(p => p.label))); r5++;
+  const paRow = (label, pick, fmt, total) => {
+    w5.getCell(r5, 2).value = label;
+    pas.forEach((p, i) => {
+      w5.getCell(r5, 3 + i).value = pick(p);
+      w5.getCell(r5, 3 + i).numFmt = fmt || "#,##0.00";
+    });
+    if (total) band(w5, r5, 2, 6, LIGHT, { bold: true, color: { argb: NAVY } });
+    r5++;
+  };
+  paRow("Doanh thu bán NOXH (tỷ)", p => p.dtban);
+  paRow("Giá trị tài sản cho thuê (tỷ)", p => p.gtts);
+  paRow("Doanh thu thuần cho thuê hằng năm (tỷ)", p => p.thue_nam, "#,##0.000");
+  w5.getCell(r5++, 2).value = "Dòng tiền ròng theo năm (tỷ đồng)";
+  const maxY = Math.max.apply(null, pas.map(p => p.cf.length));
+  for (let y = 0; y < maxY; y++) {
+    w5.getCell(r5, 2).value = "Năm " + (y + 1);
+    pas.forEach((p, i) => {
+      w5.getCell(r5, 3 + i).value = p.cf[y] === undefined ? 0 : p.cf[y];
+      w5.getCell(r5, 3 + i).numFmt = "#,##0.00";
+    });
+    r5++;
+  }
+  paRow("IRR DỰ ÁN", p => isFinite(p.irr) ? p.irr : "—", "0.00%", true);
+  paRow("Đánh giá", p => p.danhgia, "@");
+  r5++;
+  w5.getCell(r5, 2).value = "Ghi chú: phần NOXH cho thuê chiếm " + nfM(R2.gt_thue, 2)
+    + " tỷ đồng vốn đầu tư nhưng chỉ tạo dòng tiền ròng " + nfM(R2.thue_nam, 2)
+    + " tỷ đồng/năm, tương đương " + nfM(R2.ts_thue, 2)
+    + "%/năm. Nếu giữ cam kết cho thuê mà không có cơ chế chuyển nhượng sau 5 năm hoặc nguồn vốn vay dài hạn ưu đãi, dự án không đạt hiệu quả tài chính tối thiểu.";
+  w5.mergeCells(r5, 2, r5, 6);
+  w5.getCell(r5, 2).alignment = { wrapText: true, vertical: "top" };
+  w5.getRow(r5).height = 40;
+
+  // ===== 6. DOICHIEU =====
+  const w6 = wb.addWorksheet("DOICHIEU");
+  w6.views = [{ showGridLines: false }];
+  [3, 38, 16, 18, 16, 60].forEach((x, i) => w6.getColumn(i + 1).width = x);
+  w6.getCell("B2").value = "ĐỐI CHIẾU VỚI " + (S.md_old_ten || "BÁO CÁO TRƯỚC").toUpperCase();
+  w6.getCell("B2").font = { bold: true, size: 13, color: { argb: NAVY } };
+  head(w6, 4, ["Chỉ tiêu", "Bản cũ", "Bản hiệu chỉnh", "Chênh lệch", "Nguyên nhân"]);
+  const dc = [
+    ["Tổng mức đầu tư (tỷ)", S.md_old_tmdt, R2.tmdt,
+      "Tách suất vốn riêng cho khối tháp / khối đế / tầng hầm; bổ sung móng cọc, tường vây thành khoản mục độc lập; nâng đơn giá GPMB; dự phòng " + nfM(S.md_tl_duphong, 0) + "%"],
+    ["   Trong đó: xây dựng phần ngầm (tỷ)", S.md_old_ngam, R2.c_ngam,
+      "Bản cũ nhân suất vốn chỉ với diện tích sàn nổi nên bỏ sót toàn bộ tầng hầm"],
+    ["   Trong đó: móng, tường vây, xử lý nền (tỷ)", 0, S.md_mong_coc,
+      "Khoản mục độc lập, tương xứng công trình cao tầng có tầng hầm trên nền đất yếu"],
+    ["   Trong đó: lãi vay (tỷ)", S.md_old_laivay, R2.c_laivay,
+      "Tính theo dư nợ bình quân " + nfM(S.md_duno_bq, 0) + "% thay vì 100% dư nợ suốt kỳ; áp dụng lãi suất ưu đãi NOXH"],
+    ["Số căn hộ", S.md_old_socan, R2.so_can,
+      "Cơ cấu căn hộ bình quân " + nfM(R2.dtbq, 1) + " m² thay cho mức sát trần 70 m²"],
+    ["Giá bán NOXH (tr/m² TT)", S.md_old_gia, R2.gia_ban,
+      "Suy ra từ chi phí cộng lợi nhuận định mức " + S.md_ln_dinhmuc + "% thay vì giả định theo thị trường"],
+    ["Doanh thu bán NOXH (tỷ)", S.md_old_dt_noxh, R2.dt_noxh, "Tương đương"],
+    ["Giá trị phần NOXH cho thuê (tỷ)", S.md_old_gt_thue, R2.gt_thue,
+      "Không tính giả định bán lại phần cho thuê khi chưa có cơ sở pháp lý"],
+    ["Doanh thu TM-DV (tỷ)", S.md_old_dt_tm, R2.dt_tm,
+      "Phân giá theo từng tầng khối đế và trừ diện tích nhà trẻ, tiện ích chung"],
+    ["Tổng doanh thu / giá trị (tỷ)", S.md_old_dt_noxh + S.md_old_gt_thue + S.md_old_dt_tm, R2.dt_tong, ""],
+    ["Lợi nhuận trước thuế (tỷ)", S.md_old_lntt, R2.lntt,
+      "Phần NOXH bị khống chế ở mức " + S.md_ln_dinhmuc + "% chi phí theo khoản 2 Điều 85 Luật Nhà ở 2023"],
+    ["Tỷ suất lợi nhuận / TMĐT (%)", S.md_old_tsln, R2.ts_ln_tmdt,
+      "Tỷ suất cao của bản cũ không thể tồn tại cùng trần lợi nhuận định mức của phần NOXH"]
+  ];
+  dc.forEach((row, i) => {
+    const rr = 5 + i;
+    w6.getCell(rr, 2).value = row[0];
+    w6.getCell(rr, 3).value = row[1]; w6.getCell(rr, 3).numFmt = "#,##0.00";
+    w6.getCell(rr, 4).value = row[2]; w6.getCell(rr, 4).numFmt = "#,##0.00";
+    w6.getCell(rr, 5).value = row[2] - row[1]; w6.getCell(rr, 5).numFmt = "#,##0.00";
+    w6.getCell(rr, 5).font = { bold: true, color: { argb: row[2] - row[1] < 0 ? RED : GREEN } };
+    w6.getCell(rr, 6).value = row[3];
+    w6.getCell(rr, 6).alignment = { wrapText: true, vertical: "top" };
+    w6.getRow(rr).height = 28;
+  });
+
+  // ===== 7. KIEMTRA =====
+  const w7 = wb.addWorksheet("KIEMTRA");
+  w7.views = [{ showGridLines: false }];
+  [3, 14, 108].forEach((x, i) => w7.getColumn(i + 1).width = x);
+  w7.getCell("B2").value = "RÀ SOÁT TỰ ĐỘNG CÁC RÀNG BUỘC PHÁP LÝ VÀ KỸ THUẬT";
+  w7.getCell("B2").font = { bold: true, size: 13, color: { argb: NAVY } };
+  head(w7, 4, ["Mức độ", "Nội dung"]);
+  checks.forEach((c, i) => {
+    const rr = 5 + i;
+    w7.getCell(rr, 2).value = c.level === "danger" ? "VI PHẠM" : c.level === "warn" ? "LƯU Ý" : "ĐẠT";
+    w7.getCell(rr, 2).font = {
+      bold: true, color: { argb: c.level === "danger" ? RED : c.level === "warn" ? "FFC8932E" : GREEN }
+    };
+    w7.getCell(rr, 3).value = c.text;
+    w7.getCell(rr, 3).alignment = { wrapText: true, vertical: "top" };
+    w7.getRow(rr).height = 28;
+  });
+
+  const buf = await wb.xlsx.writeBuffer();
+  downloadBlob(new Blob([buf], { type: "application/octet-stream" }),
+    "MoHinhTaiChinh_" + slugVN(S.md_ten_da) + "_" + new Date().toISOString().slice(0, 10) + ".xlsx");
+}
+Object.assign(DEFAULTS, MODEL_DEFAULTS);
+
 const __root=ReactDOM.createRoot(document.getElementById("root"));
 __root.render(React.createElement(NOXHCalculator));
 </script>
