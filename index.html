@@ -1587,6 +1587,17 @@ function NOXHCalculator() {
   }));
   const dangerCount = warns.filter(w => w.level === "danger").length;
   const warnCount = warns.filter(w => w.level === "warn").length;
+  const devCredit = mode === "legal" ? null : /*#__PURE__*/React.createElement("span", {
+    style: {
+      marginLeft: "auto",
+      alignSelf: "center",
+      fontSize: "11.5px",
+      fontWeight: 600,
+      color: "#8DA2BF",
+      whiteSpace: "nowrap",
+      letterSpacing: "0.2px"
+    }
+  }, "Developed by Mai Trieu Quang @2026");
   const modeSwitcher = /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
@@ -1645,20 +1656,7 @@ function NOXHCalculator() {
       fontWeight: 600, cursor: "pointer",
       background: mode === "model" ? "#C8932E" : "transparent",
       color: mode === "model" ? "#fff" : "#B9C4D6" }
-  }, "\uD83D\uDCCA M\u00F4 h\u00ECnh t\u00E0i ch\u00EDnh"), /*#__PURE__*/React.createElement("button", {
-    type: "button",
-    onClick: () => setMode("ai"),
-    style: {
-      padding: "7px 14px",
-      borderRadius: "6px",
-      border: "none",
-      fontSize: "13px",
-      fontWeight: 600,
-      cursor: "pointer",
-      background: mode === "ai" ? "#2a78d6" : "transparent",
-      color: mode === "ai" ? "#fff" : "#B9C4D6"
-    }
-  }, "\uD83E\uDD16 AI T\u01B0 v\u1EA5n Lu\u1EAD"));
+  }, "\uD83D\uDCCA M\u00F4 h\u00ECnh t\u00E0i ch\u00EDnh"), devCredit);
   if (mode === "legal") {
     return /*#__PURE__*/React.createElement("div", {
       style: {
@@ -1752,60 +1750,6 @@ function NOXHCalculator() {
   }
   if (mode === "model") {
     return /*#__PURE__*/React.createElement(ModelTab, { v: v, setField: setField, header: modeSwitcher });
-  }
-  if (mode === "ai") {
-    return /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: "flex",
-        flexDirection: "column",
-        height: "100vh",
-        fontFamily: "sans-serif"
-      }
-    }, modeSwitcher, /*#__PURE__*/React.createElement("div", {
-      style: {
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        gap: "10px",
-        padding: "10px 16px",
-        background: "#fff",
-        borderBottom: "1px solid #E4E9F0"
-      }
-    }, /*#__PURE__*/React.createElement("div", {
-      style: {
-        fontSize: "12.5px",
-        color: "#4A5568",
-        lineHeight: 1.4
-      }
-    }, /*#__PURE__*/React.createElement("strong", {
-      style: {
-        color: "#0F2940"
-      }
-    }, "EmLaw \u2014 AI Tra c\u1EE9u & h\u1ECFi \u0111\u00E1p ph\u00E1p lu\u1EADt."), " N\u1EBFu khung b\u00EAn d\u01B0\u1EDBi kh\u00F4ng t\u1EA3i \u0111\u01B0\u1EE3c, d\u00F9ng n\u00FAt m\u1EDF tab m\u1EDBi."), /*#__PURE__*/React.createElement("a", {
-      href: "https://emlaw.vn",
-      target: "_blank",
-      rel: "noopener noreferrer",
-      style: {
-        flexShrink: 0,
-        padding: "7px 12px",
-        borderRadius: "6px",
-        background: "#2a78d6",
-        color: "#fff",
-        fontSize: "12.5px",
-        fontWeight: 600,
-        textDecoration: "none",
-        whiteSpace: "nowrap"
-      }
-    }, "M\u1EDF tab m\u1EDBi \u2197")), /*#__PURE__*/React.createElement("iframe", {
-      title: "EmLaw - AI Tu van Luat",
-      src: "https://emlaw.vn",
-      style: {
-        flex: 1,
-        width: "100%",
-        border: "none"
-      },
-      sandbox: "allow-scripts allow-same-origin allow-forms allow-modals allow-popups allow-popups-to-escape-sandbox"
-    }));
   }
   return /*#__PURE__*/React.createElement("div", {
     className: "app"
